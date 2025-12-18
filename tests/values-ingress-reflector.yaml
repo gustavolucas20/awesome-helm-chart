@@ -1,6 +1,7 @@
 # Ingress Reflector TLS test case
 ingress:
   enabled: true
+  className: "nginx"
   hosts:
     - host: my-app.com
       paths:
@@ -14,6 +15,7 @@ ingress:
 
 ingressInternal:
   enabled: true
+  className: "nginx-internal"
   hosts:
     - host: my-app-internal.local
       paths:
