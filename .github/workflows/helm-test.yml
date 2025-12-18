@@ -27,6 +27,8 @@ jobs:
           - tests/values-default.yaml
           - tests/values-oci-fss.yaml
           - tests/values-oracle-secrets.yaml
+          - tests/values-statefulset-oci-bv.yaml
+          - tests/values-deployment-secrets.yaml
     steps:
       - uses: actions/checkout@v4
       - name: Install Helm

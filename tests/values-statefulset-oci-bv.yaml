@@ -1,0 +1,13 @@
+# StatefulSet with OCI Block Volume test case
+kind: StatefulSet
+replicaCount: 3
+
+volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: "oci-bv-retain"
+      resources:
+        requests:
+          storage: 50Gi
