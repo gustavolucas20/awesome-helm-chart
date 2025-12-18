@@ -12,7 +12,7 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- with .Values.ingressInternal.className }}
+  {{- with .Values.ingressInternal.className | default "nginx-internal" }}
   ingressClassName: {{ . }}
   {{- end }}
   {{- if .Values.ingressInternal.tls }}
