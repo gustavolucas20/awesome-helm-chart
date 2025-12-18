@@ -1,0 +1,23 @@
+{{- range .Values.storageClasses -}}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "chartname.labels" $ | nindent 4 }}
+provisioner: {{ .provisioner }}
+{{- if .allowVolumeExpansion }}
+allowVolumeExpansion: {{ .allowVolumeExpansion }}
+{{- end }}
+{{- if .reclaimPolicy }}
+reclaimPolicy: {{ .reclaimPolicy }}
+{{- end }}
+{{- if .volumeBindingMode }}
+volumeBindingMode: {{ .volumeBindingMode }}
+{{- end }}
+{{- if .parameters }}
+parameters:
+  {{- toYaml .parameters | nindent 2 }}
+{{- end }}
+---
+{{- end }}

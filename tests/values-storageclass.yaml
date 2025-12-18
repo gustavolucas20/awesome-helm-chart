@@ -1,0 +1,17 @@
+# StorageClass expansion test case
+storageClasses:
+  - name: expandable-oci-bv
+    allowVolumeExpansion: true
+    provisioner: oci.oraclecloud.com/blockvolume
+    reclaimPolicy: Delete
+    volumeBindingMode: WaitForFirstConsumer
+    parameters:
+      type: balanced
+
+persistence:
+  enabled: true
+  claims:
+    - name: expandable-vol
+      accessModes: ["ReadWriteOnce"]
+      size: 100Gi
+      storageClass: "expandable-oci-bv"
