@@ -11,6 +11,12 @@ replicaCount: 1
 nameOverride: ""
 fullnameOverride: ""
 
+imagePullSecrets: []
+revisionHistoryLimit: 3
+
+statefulset:
+  annotations: {}
+
 image:
   repository: nginx
   pullPolicy: IfNotPresent
@@ -144,31 +150,38 @@ service:
   name: http
 
 ingress:
-  enabled: false
-  className: ""
+  enabled: true
+  className: nginx
   annotations: {}
+
   hosts:
     - host: chart-example.local
       paths:
         - path: /
-          pathType: ImplementationSpecific
-  tls: []
-# Example tls
-#   - secretName: my-app-internal-tls
-#     reflectsFrom: "cert-manager/internal-tls"
-#     hosts:
-#       - my-app-internal.local
+          pathType: Prefix
+  extraHosts: []
+  extraPaths: []
+  extraTls: []
+  tls:
+    enabled: true
+    secretName: ""
+    # reflectsFrom: "namespace/secret"
 
 ingressInternal:
   enabled: false
-  className: ""
+  className: nginx-internal
   annotations: {}
   hosts:
     - host: chart-example-internal.local
       paths:
         - path: /
-          pathType: ImplementationSpecific
-  tls: []
+          pathType: Prefix
+  extraHosts: []
+  extraPaths: []
+  extraTls: []
+  tls:
+    enabled: true
+    secretName: ""
 
 gateway:
   enabled: false
@@ -213,12 +226,25 @@ persistence:
 
 storageClasses: []
 # - name: custom-oci-bv
+#   enabled: true
+#   default:true
 #   allowVolumeExpansion: true
 #   provisioner: oci.oraclecloud.com/blockvolume
 #   reclaimPolicy: Retain
 #   volumeBindingMode: WaitForFirstConsumer
 #   parameters:
 #     type: balanced
+
+# - name: oci-fss
+#   enabled: true
+#   default: false
+#   provisioner: fss.csi.oraclecloud.com
+#   reclaimPolicy: Retain
+#   volumeBindingMode: Immediate
+#   allowVolumeExpansion: true
+#   parameters:
+#     availabilityDomain: AD-1
+#     mountTargetOcid: ocid1.mounttarget.oc1.sa-saopaulo-1.xxxxx
 
 volumeClaimTemplates: []
 # - metadata:
@@ -320,14 +346,6 @@ schedulerName: ""
 # 8. HOOKS, CRONS & ADVANCED
 # =============================================================================
 cronJobs: []
-  # - name: my-cronjob
-  #   schedule: "*/5 * * * *"
-  #   containers:
-  #     - name: worker
-  #       image: busybox:latest
-
-extraContainers: []
-initContainers: []
 extraObjects: []
 
 # Labels/Annotations

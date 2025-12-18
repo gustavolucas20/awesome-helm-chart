@@ -1,6 +1,8 @@
-{{- if .Values.ingressInternal.enabled -}}
-{{- $fullName := include "chartname.fullname" . -}}
-{{- $svcPort := .Values.service.port -}}
+{{- if .Values.ingressInternal.enabled }}
+
+{{- $fullName := include "chartname.fullname" . }}
+{{- $svcPort := .Values.service.port }}
+
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -11,30 +13,36 @@ metadata:
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
+
 spec:
-  {{- with .Values.ingressInternal.className | default "nginx-internal" }}
-  ingressClassName: {{ . }}
-  {{- end }}
-  {{- if .Values.ingressInternal.tls }}
+  ingressClassName: {{ .Values.ingressInternal.className | default "nginx-internal" }}
+
+  {{- if .Values.ingressInternal.tls.enabled }}
   tls:
-    {{- range .Values.ingressInternal.tls }}
     - hosts:
-        {{- range .hosts }}
-        - {{ . | quote }}
+        {{- range .Values.ingressInternal.hosts }}
+        - {{ .host | quote }}
         {{- end }}
-      secretName: {{ .secretName }}
+      secretName: {{ default (printf "%s-tls" $fullName) .Values.ingressInternal.tls.secretName }}
+    {{- if .Values.ingressInternal.extraTls }}
+    {{- include "chart.render" (dict "value" .Values.ingressInternal.extraTls "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
   rules:
+    {{- if .Values.ingressInternal.extraHosts }}
+    {{- include "chart.render" (dict "value" .Values.ingressInternal.extraHosts "context" $) | nindent 4 }}
+    {{- end }}
     {{- range .Values.ingressInternal.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
+          {{- if $.Values.ingressInternal.extraPaths }}
+          {{- include "chart.render" (dict "value" $.Values.ingressInternal.extraPaths "context" $) | nindent 10 }}
+          {{- end }}
+
           {{- range .paths }}
           - path: {{ .path }}
-            {{- if .pathType }}
-            pathType: {{ .pathType }}
-            {{- end }}
+            pathType: {{ .pathType | default "Prefix" }}
             backend:
               service:
                 name: {{ $fullName }}
