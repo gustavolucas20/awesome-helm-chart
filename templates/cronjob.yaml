@@ -1,0 +1,95 @@
+{{- range $job := .Values.cronJobs }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "chartname.fullname" $ }}-{{ $job.name }}
+  labels:
+    {{- include "chartname.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: cronjob
+    cronjob: {{ $job.name }}
+spec:
+  schedule: {{ $job.schedule | quote }}
+  concurrencyPolicy: {{ $job.concurrencyPolicy | default "Forbid" }}
+  {{- if $job.successfulJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ $job.successfulJobsHistoryLimit | int }}
+  {{- end }}
+  {{- if $job.failedJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ $job.failedJobsHistoryLimit | int }}
+  {{- end }}
+  suspend: {{ $job.suspend | default false }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "chartname.selectorLabels" $ | nindent 12 }}
+            app.kubernetes.io/component: cronjob
+            cronjob: {{ $job.name }}
+          {{- with $job.podAnnotations }}
+          annotations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if $.Values.openTelemetry.instrumentation.enabled }}
+            instrumentation.opentelemetry.io/inject-{{ $.Values.openTelemetry.instrumentation.language }}: "true"
+          {{- end }}
+        spec:
+          {{- with $.Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          serviceAccountName: {{ ($job.serviceAccount | default dict).name | default (include "chartname.serviceAccountName" $) }}
+          securityContext:
+            {{- toYaml ($job.podSecurityContext | default $.Values.podSecurityContext) | nindent 12 }}
+          restartPolicy: {{ $job.restartPolicy | default "OnFailure" }}
+          {{- with $job.initContainers }}
+          initContainers:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+          {{- range $container := $job.containers }}
+            - name: {{ $container.name }}
+              securityContext:
+                {{- toYaml ($container.securityContext | default $.Values.securityContext) | nindent 16 }}
+              image: "{{ $container.image }}"
+              imagePullPolicy: {{ $container.imagePullPolicy | default "IfNotPresent" }}
+              {{- with $container.command }}
+              command:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              {{- with $container.args }}
+              args:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              resources:
+                {{- toYaml ($container.resources | default $.Values.resources) | nindent 16 }}
+              {{- with $container.volumeMounts }}
+              volumeMounts:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              {{- with $container.env }}
+              env:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              {{- with $container.envFrom }}
+              envFrom:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+          {{- end }}
+          {{- with $job.volumes }}
+          volumes:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $job.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $job.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $job.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

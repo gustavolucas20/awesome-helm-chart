@@ -1,0 +1,13 @@
+{{- if .Values.openTelemetry.enabled -}}
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: {{ include "chartname.fullname" . }}
+  labels:
+    {{- include "chartname.labels" . | nindent 4 }}
+spec:
+  mode: {{ .Values.openTelemetry.mode | default "DaemonSet" }}
+  serviceAccount: {{ include "chartname.serviceAccountName" . }}
+  config:
+    {{- tpl .Values.openTelemetry.config . | nindent 4 }}
+{{- end }}

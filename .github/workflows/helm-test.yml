@@ -1,0 +1,36 @@
+name: Helm Chart CI
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+      - name: Helm Lint
+        run: helm lint .
+
+  template-test:
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        values_file:
+          - tests/values-default.yaml
+          - tests/values-oci-fss.yaml
+          - tests/values-oracle-secrets.yaml
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+      - name: Helm Template Test (${{ matrix.values_file }})
+        run: |
+          helm template . -f ${{ matrix.values_file }} --debug

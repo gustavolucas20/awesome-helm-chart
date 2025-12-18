@@ -1,0 +1,12 @@
+# OCI FSS test case
+persistence:
+  enabled: true
+  claims:
+    - name: logs
+      accessModes: ["ReadWriteMany"]
+      size: 50Gi
+      storageClass: "oci-fss"
+    - name: data
+      accessModes: ["ReadWriteOnce"]
+      size: 10Gi
+      storageClass: "oci-bv"

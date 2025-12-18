@@ -1,0 +1,18 @@
+{{- if .Values.configMaps.enabled -}}
+{{- $root := . -}}
+{{- $filesDir := .Values.configMaps.filesDir | default "files" -}}
+{{- range $path, $bytes := .Files.Glob (printf "%s/**" $filesDir) }}
+---
+{{- $base := base $path }}
+{{- $name := $base | replace "." "-" | lower }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "chartname.fullname" $root }}-{{ $name }}
+  labels:
+    {{- include "chartname.labels" $root | nindent 4 }}
+data:
+  {{ $base | quote }}: |-
+{{ $root.Files.Get $path | indent 4 }}
+{{- end }}
+{{- end -}}
