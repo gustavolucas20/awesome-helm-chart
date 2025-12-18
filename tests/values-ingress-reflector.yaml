@@ -7,10 +7,9 @@ ingress:
         - path: /
           pathType: ImplementationSpecific
   tls:
-    - secretName: my-app-tls
-      reflectsFrom: "cert-manager/main-tls"
-      hosts:
-        - my-app.com
+    enabled: true
+    secretName: my-app-tls
+    reflectsFrom: "cert-manager/main-tls"
 
 ingressInternal:
   enabled: true
@@ -20,7 +19,6 @@ ingressInternal:
         - path: /
           pathType: ImplementationSpecific
   tls:
-    - secretName: my-app-internal-tls
-      reflectsFrom: "cert-manager/internal-tls"
-      hosts:
-        - my-app-internal.local
+    enabled: true
+    secretName: my-app-internal-tls
+    reflectsFrom: "cert-manager/internal-tls"
