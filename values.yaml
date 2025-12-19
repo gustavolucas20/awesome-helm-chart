@@ -31,19 +31,20 @@ env: []
   # - name: VAR_NAME
   #   value: "value"
 
-envFrom: []
-  # - configMapRef:
-  #     name: specialized-config-map
-  # - secretRef:
-  #     name: specialized-secret
+# Extra ConfigMaps/Secrets to load as environment variables (envFrom)
+extraEnvFromConfigMap: []
+  # - my-config-map
+  # - "{{ include \"chartname.fullname\" . }}-dynamic-config"
+
+extraEnvFromSecret: []
+  # - my-secret
+  # - "{{ include \"chartname.fullname\" . }}-eso-secret"
+
+# Optional: Configuration for SealedSecrets / Global Secrets
+sealedSecrets:
+  enabled: false
 
 resources: {}
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
 
 startupProbe:
   enabled: false
@@ -54,7 +55,7 @@ startupProbe:
   periodSeconds: 10
 
 livenessProbe:
-  enabled: true
+  enabled: false
   httpGet:
     path: /
     port: http
@@ -64,7 +65,7 @@ livenessProbe:
   failureThreshold: 3
 
 readinessProbe:
-  enabled: true
+  enabled: false
   httpGet:
     path: /
     port: http
@@ -75,51 +76,50 @@ readinessProbe:
   failureThreshold: 3
 
 updateStrategy: {}
-  # type: RollingUpdate
-  # rollingUpdate:
-  #   maxUnavailable: 25%
-  #   maxSurge: 25%
-
 terminationGracePeriodSeconds: 30
-
 lifecycle: {}
-  # postStart:
-  #   exec:
-  #     command: ["/bin/sh", "-c", "echo Hello from the postStart handler > /usr/share/message"]
-  # preStop:
-  #   exec:
-  #     command: ["/bin/sh", "-c", "nginx -s quit; while killall -0 nginx; do sleep 1; done"]
 
 # =============================================================================
 # 2. CONFIGURATION & EXTERNAL SECRETS
 # =============================================================================
+# Path to the directory containing configuration subfolders.
+# The chart will dynamically create one ConfigMap for each subfolder found here.
+configFilesPath: "files"
+
+# Additional ConfigMaps to be created and mounted
+# Each entry will create a ConfigMap and mount it to the container.
+extraConfigMaps: []
+  # - name: app-config
+  #   mountPath: /etc/myapp
+  #   data:
+  #     config.yaml: |
+  #       key: value
+  # - name: existing-cm
+  #   mountPath: /etc/external
+  #   existingName: my-custom-config
+  # - name: folder-config
+  #   mountPath: /etc/configs
+  #   fromFolder: configs/ # Loads files from helm/files/configs/
+
+# Additional Secrets to be created and mounted
+extraSecrets: []
+  # - name: app-secret
+  #   mountPath: /etc/secret
+  #   data:
+  #     apiKey: "my-secret-key"
+  # - name: existing-secret
+  #   mountPath: /etc/db
+  #   existingName: db-credentials
+
 configMaps:
-  enabled: true
-  filesDir: files
+  enabled: false # Legacy - will be removed in future versions
+
+secrets:
+  enabled: false # Legacy - will be removed in future versions
 
 secretStore:
   enabled: false
   provider: {}
-  # oracle:
-  #   region: us-ashburn-1
-  #   vault: ocid1.vault.oc1.iad.aaaaaa...
-  #   # --- Choice 1: Instance Principal ---
-  #   # auth:
-  #   #   secretRef:
-  #   #     principalRef:
-  #   #       name: oci-principal
-  #
-  #   # --- Choice 2: User Principal ---
-  #   # user: ocid1.user.oc1..aaaaaa...
-  #   # tenancy: ocid1.tenancy.oc1..aaaaaa...
-  #   # auth:
-  #   #   secretRef:
-  #   #     privatekey:
-  #   #       name: oracle-secret
-  #   #       key: privateKey
-  #   #     fingerprint:
-  #   #       name: oracle-secret
-  #   #       key: fingerprint
 
 externalSecret:
   enabled: false
@@ -127,17 +127,10 @@ externalSecret:
     name: ""
     kind: SecretStore
   target:
-    # name: my-app-secret
     creationPolicy: Owner
   refreshInterval: "1h"
   data: []
-  # - secretKey: username
-  #   remoteRef:
-  #     key: database-creds
-  #     property: username
   dataFrom: []
-  # - extract:
-  #     key: all-database-creds
 
 # =============================================================================
 # 3. NETWORKING & TRAFFIC MANAGEMENT
@@ -150,10 +143,9 @@ service:
   name: http
 
 ingress:
-  enabled: true
+  enabled: false
   className: nginx
   annotations: {}
-
   hosts:
     - host: chart-example.local
       paths:
@@ -165,7 +157,6 @@ ingress:
   tls:
     enabled: false
     secretName: ""
-    # reflectsFrom: "namespace/secret"
 
 ingressInternal:
   enabled: false
@@ -201,10 +192,6 @@ gateway:
   rules: []
 
 hostAliases: []
-# - ip: "127.0.0.1"
-#   hostnames:
-#   - "foo.local"
-
 dnsPolicy: ClusterFirst
 dnsConfig: {}
 
@@ -212,52 +199,23 @@ dnsConfig: {}
 # 4. PERSISTENCE & STORAGE
 # =============================================================================
 persistence:
-  enabled: false
-  # storageClass: "oci-fss"
-  # accessModes: ["ReadWriteMany"]
-  # size: 10Gi
-  # annotations:
-  #   nfs.oci.oraclecloud.com/mount-target: <mount-target-ip>
+  enabled: true
+  storageClass: "oci-bv-retain"
+  accessModes: ["ReadWriteOnce"]
+  size: 50Gi
   claims: []
-  # - name: data
-  #   accessModes: ["ReadWriteOnce"]
-  #   size: 10Gi
-  #   storageClass: "-"
-
-storageClasses: []
-# - name: custom-oci-bv
-#   enabled: true
-#   default:true
-#   allowVolumeExpansion: true
-#   provisioner: oci.oraclecloud.com/blockvolume
-#   reclaimPolicy: Retain
-#   volumeBindingMode: WaitForFirstConsumer
-#   parameters:
-#     type: balanced
-
-# - name: oci-fss
-#   enabled: true
-#   default: false
-#   provisioner: fss.csi.oraclecloud.com
-#   reclaimPolicy: Retain
-#   volumeBindingMode: Immediate
-#   allowVolumeExpansion: true
-#   parameters:
-#     availabilityDomain: AD-1
-#     mountTargetOcid: ocid1.mounttarget.oc1.sa-saopaulo-1.xxxxx
+  name: ""
+  mountPath: "/data"
+  existingClaim: ""
 
 volumeClaimTemplates: []
-# - metadata:
-#     name: data
-#   spec:
-#     accessModes: [ "ReadWriteOnce" ]
-#     resources:
-#       requests:
-#         storage: 1Gi
 
-# Additional volumes/mounts on the output definition.
+initContainers: []
+extraContainers: []
 volumes: []
 volumeMounts: []
+extraVolumes: []
+extraVolumeMounts: []
 
 # =============================================================================
 # 5. OBSERVABILITY
@@ -316,11 +274,7 @@ networkPolicy:
   egress: []
 
 podSecurityContext: {}
-  # fsGroup: 2000
-
 securityContext: {}
-  # runAsUser: 1000
-  # runAsNonRoot: true
 
 # =============================================================================
 # 7. SCHEDULING & SCALING
@@ -338,7 +292,6 @@ pdb:
 nodeSelector: {}
 tolerations: []
 affinity: {}
-
 priorityClassName: ""
 schedulerName: ""
 
@@ -347,8 +300,6 @@ schedulerName: ""
 # =============================================================================
 cronJobs: []
 extraObjects: []
-
-# Labels/Annotations
 extraLabels: {}
 podAnnotations: {}
 commonAnnotations: {}

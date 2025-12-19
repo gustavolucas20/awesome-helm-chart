@@ -1,0 +1,7 @@
+# Test case for dynamic ConfigMap scanning
+kind: Deployment
+
+# This will scan helm/files/ and create ConfigMaps for each subfolder
+configFilesPath: "files"
+# Also test with environment-specific directory
+# configFilesPath: "files-dev"

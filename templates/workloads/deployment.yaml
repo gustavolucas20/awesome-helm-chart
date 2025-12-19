@@ -65,16 +65,20 @@ spec:
       dnsConfig:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.podSecurityContext }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.initContainers }}
       initContainers:
         {{- tpl (toYaml .) $ | nindent 8 }}
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with .Values.workingDir }}
           workingDir: {{ . | quote }}
           {{- end }}
@@ -96,28 +100,81 @@ spec:
           env:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.envFrom }}
+          {{- if or .Values.extraEnvFromConfigMap .Values.extraEnvFromSecret .Values.sealedSecrets.enabled }}
           envFrom:
-            {{- toYaml . | nindent 12 }}
+            {{- range .Values.extraEnvFromConfigMap }}
+            - configMapRef:
+                name: {{ tpl . $ }}
+            {{- end }}
+            {{- range .Values.extraEnvFromSecret }}
+            - secretRef:
+                name: {{ tpl . $ }}
+            {{- end }}
+            {{- if .Values.sealedSecrets.enabled }}
+            - secretRef:
+                name: {{ include "chartname.fullname" . }}
+            {{- end }}
           {{- end }}
           {{- if and .Values.startupProbe .Values.startupProbe.enabled }}
           startupProbe:
-            {{- toYaml (omit .Values.startupProbe "enabled") | nindent 12 }}
+            {{- $probe := omit .Values.startupProbe "enabled" }}
+            {{- if or $probe.tcpSocket $probe.exec $probe.grpc }}
+            {{- $probe = omit $probe "httpGet" }}
+            {{- end }}
+            {{- toYaml $probe | nindent 12 }}
           {{- end }}          
           {{- if and .Values.livenessProbe .Values.livenessProbe.enabled }}
           livenessProbe:
-            {{- toYaml (omit .Values.livenessProbe "enabled") | nindent 12 }}
+            {{- $probe := omit .Values.livenessProbe "enabled" }}
+            {{- if or $probe.tcpSocket $probe.exec $probe.grpc }}
+            {{- $probe = omit $probe "httpGet" }}
+            {{- end }}
+            {{- toYaml $probe | nindent 12 }}
           {{- end }}
           {{- if and .Values.readinessProbe .Values.readinessProbe.enabled }}
           readinessProbe:
-            {{- toYaml (omit .Values.readinessProbe "enabled") | nindent 12 }}
+            {{- $probe := omit .Values.readinessProbe "enabled" }}
+            {{- if or $probe.tcpSocket $probe.exec $probe.grpc }}
+            {{- $probe = omit $probe "httpGet" }}
+            {{- end }}
+            {{- toYaml $probe | nindent 12 }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- with .Values.volumeMounts }}
           volumeMounts:
+            {{- if .Values.persistence.enabled }}
+              {{- if .Values.persistence.claims }}
+                {{- range .Values.persistence.claims }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath | default (printf "/data/%s" .name) }}
+                {{- end }}
+              {{- else }}
+            - name: {{ .Values.persistence.name | default "storage" }}
+              mountPath: {{ .Values.persistence.mountPath | default "/data" }}
+              {{- end }}
+            {{- end }}
+            {{- range .Values.extraConfigMaps }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+              {{- if .subPath }}
+              subPath: {{ .subPath }}
+              {{- end }}
+              readOnly: {{ .readOnly | default true }}
+            {{- end }}
+            {{- range .Values.extraSecrets }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+              {{- if .subPath }}
+              subPath: {{ .subPath }}
+              {{- end }}
+              readOnly: {{ .readOnly | default true }}
+            {{- end }}
+            {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- end }}
+            {{- if .Values.extraVolumeMounts }}
+            {{- include "chart.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- end }}
           {{- with .Values.lifecycle }}
           lifecycle:
             {{- toYaml . | nindent 12 }}
@@ -125,10 +182,38 @@ spec:
         {{- with .Values.extraContainers }}
         {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
-      {{- with .Values.volumes }}
       volumes:
+        {{- if .Values.persistence.enabled }}
+          {{- if .Values.persistence.claims }}
+            {{- range .Values.persistence.claims }}
+        - name: {{ .name }}
+          persistentVolumeClaim:
+            claimName: {{ include "chartname.fullname" $ }}-{{ .name }}
+            {{- end }}
+          {{- else }}
+        - name: {{ .Values.persistence.name | default "storage" }}
+          persistentVolumeClaim:
+            claimName: {{ default (include "chartname.fullname" .) .Values.persistence.existingClaim }}
+          {{- end }}
+        {{- end }}
+        {{- range .Values.extraConfigMaps }}
+        - name: {{ .name }}
+          configMap:
+            name: {{ .existingName | default .name }}
+            defaultMode: {{ .defaultMode | default 420 }}
+        {{- end }}
+        {{- range .Values.extraSecrets }}
+        - name: {{ .name }}
+          secret:
+            secretName: {{ .existingName | default .name }}
+            defaultMode: {{ .defaultMode | default 420 }}
+        {{- end }}
+        {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
+        {{- if .Values.extraVolumes }}
+        {{- include "chart.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

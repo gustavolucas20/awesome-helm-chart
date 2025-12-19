@@ -1,0 +1,243 @@
+{{- if eq .Values.kind "StatefulSet" -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "chartname.fullname" . }}
+  labels:
+    {{- include "chartname.labels" . | nindent 4 }}
+    {{- with .Values.extraLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.statefulset.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  serviceName: {{ include "chartname.fullname" . }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  {{- with .Values.updateStrategy }}
+  updateStrategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit | default 3 }}
+  selector:
+    matchLabels:
+      {{- include "chartname.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.openTelemetry.instrumentation.enabled }}
+      annotations:
+        instrumentation.opentelemetry.io/inject-{{ .Values.openTelemetry.instrumentation.language }}: "true"
+      {{- end }}
+      labels:
+        {{- include "chartname.selectorLabels" . | nindent 8 }}
+        {{- with .Values.extraLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "chartname.serviceAccountName" . }}
+      {{- with .Values.hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.schedulerName }}
+      schedulerName: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.dnsPolicy }}
+      dnsPolicy: {{ . }}
+      {{- end }}
+      {{- with .Values.dnsConfig }}
+      dnsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.initContainers }}
+      initContainers:
+        {{- tpl (toYaml .) $ | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.workingDir }}
+          workingDir: {{ . | quote }}
+          {{- end }}
+          {{- with .Values.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          {{- with .Values.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if or .Values.extraEnvFromConfigMap .Values.extraEnvFromSecret .Values.sealedSecrets.enabled }}
+          envFrom:
+            {{- range .Values.extraEnvFromConfigMap }}
+            - configMapRef:
+                name: {{ tpl . $ }}
+            {{- end }}
+            {{- range .Values.extraEnvFromSecret }}
+            - secretRef:
+                name: {{ tpl . $ }}
+            {{- end }}
+            {{- if .Values.sealedSecrets.enabled }}
+            - secretRef:
+                name: {{ include "chartname.fullname" . }}
+            {{- end }}
+          {{- end }}
+          {{- if and .Values.startupProbe .Values.startupProbe.enabled }}
+          startupProbe:
+            {{- $probe := omit .Values.startupProbe "enabled" }}
+            {{- if or $probe.tcpSocket $probe.exec $probe.grpc }}
+            {{- $probe = omit $probe "httpGet" }}
+            {{- end }}
+            {{- toYaml $probe | nindent 12 }}
+          {{- end }}          
+          {{- if and .Values.livenessProbe .Values.livenessProbe.enabled }}
+          livenessProbe:
+            {{- $probe := omit .Values.livenessProbe "enabled" }}
+            {{- if or $probe.tcpSocket $probe.exec $probe.grpc }}
+            {{- $probe = omit $probe "httpGet" }}
+            {{- end }}
+            {{- toYaml $probe | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.readinessProbe .Values.readinessProbe.enabled }}
+          readinessProbe:
+            {{- $probe := omit .Values.readinessProbe "enabled" }}
+            {{- if or $probe.tcpSocket $probe.exec $probe.grpc }}
+            {{- $probe = omit $probe "httpGet" }}
+            {{- end }}
+            {{- toYaml $probe | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+              {{- if .Values.persistence.claims }}
+                {{- range .Values.persistence.claims }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath | default (printf "/data/%s" .name) }}
+                {{- end }}
+              {{- else }}
+            - name: {{ .Values.persistence.name | default "storage" }}
+              mountPath: {{ .Values.persistence.mountPath | default "/data" }}
+              {{- end }}
+            {{- end }}
+            {{- range .Values.extraConfigMaps }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+              {{- if .subPath }}
+              subPath: {{ .subPath }}
+              {{- end }}
+              readOnly: {{ .readOnly | default true }}
+            {{- end }}
+            {{- range .Values.extraSecrets }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+              {{- if .subPath }}
+              subPath: {{ .subPath }}
+              {{- end }}
+              readOnly: {{ .readOnly | default true }}
+            {{- end }}
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.lifecycle }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- with .Values.extraContainers }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
+      volumes:
+        {{- if .Values.persistence.enabled }}
+          {{- if .Values.persistence.claims }}
+            {{- range .Values.persistence.claims }}
+        - name: {{ .name }}
+          persistentVolumeClaim:
+            claimName: {{ include "chartname.fullname" $ }}-{{ .name }}
+            {{- end }}
+          {{- else }}
+        - name: {{ .Values.persistence.name | default "storage" }}
+          persistentVolumeClaim:
+            claimName: {{ default (include "chartname.fullname" .) .Values.persistence.existingClaim }}
+          {{- end }}
+        {{- end }}
+        {{- range .Values.extraConfigMaps }}
+        - name: {{ .name }}
+          configMap:
+            name: {{ .existingName | default .name }}
+            defaultMode: {{ .defaultMode | default 420 }}
+        {{- end }}
+        {{- range .Values.extraSecrets }}
+        - name: {{ .name }}
+          secret:
+            secretName: {{ .existingName | default .name }}
+            defaultMode: {{ .defaultMode | default 420 }}
+        {{- end }}
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        {{- include "chartname.affinity" . | nindent 8 }} 
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if and .Values.persistence.enabled (not .Values.volumeClaimTemplates) }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          {{- toYaml (.Values.persistence.accessModes | default (list "ReadWriteOnce")) | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size | default "10Gi" | quote }}
+        {{- if .Values.persistence.storageClass }}
+        {{- if (eq "-" .Values.persistence.storageClass) }}
+        storageClassName: ""
+        {{- else }}
+        storageClassName: {{ .Values.persistence.storageClass | quote }}
+        {{- end }}
+        {{- end }}
+  {{- else if .Values.volumeClaimTemplates }}
+  volumeClaimTemplates:
+    {{- toYaml .Values.volumeClaimTemplates | nindent 4 }}
+  {{- end }}
+{{- end -}}

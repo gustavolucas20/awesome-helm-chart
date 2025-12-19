@@ -1,0 +1,44 @@
+# Test case for OpenTelemetry instrumentation with multiple languages
+kind: Deployment
+
+openTelemetry:
+  enabled: true
+  mode: deployment
+  config: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+    exporters:
+      otlphttp:
+        endpoint: "http://tempo.svc.cluster.local:4318"
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          exporters: [otlphttp]
+
+  instrumentation:
+    enabled: true
+    sampler:
+      type: parentbased_traceidratio
+      argument: "1"
+
+    # Test Java instrumentation
+    java:
+      env:
+        - name: OTEL_LOG_LEVEL
+          value: debug
+
+    # Test Python instrumentation
+    python:
+      env:
+        - name: OTEL_PYTHON_LOG_LEVEL
+          value: info
+
+    # Test Go instrumentation
+    go:
+      env:
+        - name: OTEL_GO_AUTO_TARGET_EXE
+          value: /app/main

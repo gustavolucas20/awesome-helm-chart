@@ -1,0 +1,36 @@
+{{- range .Values.extraConfigMaps -}}
+{{- if or .data .fromFile .fromFolder -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "chartname.labels" $ | nindent 4 }}
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  {{- if .data }}
+    {{- toYaml .data | nindent 2 }}
+  {{- end }}
+  {{- if .fromFile }}
+    {{- $fileContent := $.Files.Get (printf "files/%s" .fromFile) -}}
+    {{- if $fileContent }}
+  {{ base .fromFile | quote }}: |-
+{{ $fileContent | indent 4 }}
+    {{- end -}}
+  {{- end }}
+  {{- if .fromFolder }}
+    {{- $folderPath := .fromFolder | trimSuffix "/" -}}
+    {{- range $path, $bytes := $.Files.Glob (printf "files/%s/**" $folderPath) -}}
+      {{- $content := $.Files.Get $path -}}
+      {{- if $content }}
+  {{ base $path | quote }}: |-
+{{ $content | indent 4 }}
+      {{- end -}}
+    {{- end -}}
+  {{- end }}
+---
+{{- end -}}
+{{- end -}}
