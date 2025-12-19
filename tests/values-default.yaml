@@ -1,8 +1,11 @@
 # Basic test case
-replicaCount: 2
-image:
-  repository: nginx
-  tag: latest
-service:
-  type: ClusterIP
-  port: 80
+workload:
+  replicaCount: 2
+  image:
+    repository: nginx
+    tag: latest
+
+networking:
+  service:
+    type: ClusterIP
+    port: 80

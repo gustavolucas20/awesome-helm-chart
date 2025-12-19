@@ -1,4 +1,4 @@
-{{- if .Values.gateway.enabled -}}
+{{- if .Values.networking.gateway.enabled -}}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -7,14 +7,14 @@ metadata:
     {{- include "chartname.labels" . | nindent 4 }}
 spec:
   parentRefs:
-    {{- toYaml .Values.gateway.parentRefs | nindent 4 }}
-  {{- with .Values.gateway.hostnames }}
+    {{- toYaml .Values.networking.gateway.parentRefs | nindent 4 }}
+  {{- with .Values.networking.gateway.hostnames }}
   hostnames:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   rules:
-    {{- if .Values.gateway.rules }}
-    {{- toYaml .Values.gateway.rules | nindent 4 }}
+    {{- if .Values.networking.gateway.rules }}
+    {{- toYaml .Values.networking.gateway.rules | nindent 4 }}
     {{- else }}
     - matches:
       - path:
@@ -22,6 +22,6 @@ spec:
           value: /
       backendRefs:
       - name: {{ include "chartname.fullname" . }}
-        port: {{ .Values.service.port }}
+        port: {{ .Values.networking.service.port }}
     {{- end }}
 {{- end }}

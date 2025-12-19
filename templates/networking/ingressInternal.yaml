@@ -1,7 +1,7 @@
-{{- if .Values.ingressInternal.enabled }}
+{{- if .Values.networking.ingressInternal.enabled }}
 
 {{- $fullName := include "chartname.fullname" . }}
-{{- $svcPort := .Values.service.port }}
+{{- $svcPort := .Values.networking.service.port }}
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -9,35 +9,35 @@ metadata:
   name: {{ $fullName }}-internal
   labels:
     {{- include "chartname.labels" . | nindent 4 }}
-  {{- with .Values.ingressInternal.annotations }}
+  {{- with .Values.networking.ingressInternal.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 
 spec:
-  ingressClassName: {{ .Values.ingressInternal.className | default "nginx-internal" }}
+  ingressClassName: {{ .Values.networking.ingressInternal.className | default "nginx-internal" }}
 
-  {{- if .Values.ingressInternal.tls.enabled }}
+  {{- if .Values.networking.ingressInternal.tls.enabled }}
   tls:
     - hosts:
-        {{- range .Values.ingressInternal.hosts }}
+        {{- range .Values.networking.ingressInternal.hosts }}
         - {{ .host | quote }}
         {{- end }}
-      secretName: {{ default (printf "%s-tls" $fullName) .Values.ingressInternal.tls.secretName }}
-    {{- if .Values.ingressInternal.extraTls }}
-    {{- include "chart.render" (dict "value" .Values.ingressInternal.extraTls "context" $) | nindent 4 }}
+      secretName: {{ default (printf "%s-tls" $fullName) .Values.networking.ingressInternal.tls.secretName }}
+    {{- if .Values.networking.ingressInternal.extraTls }}
+    {{- include "chart.render" (dict "value" .Values.networking.ingressInternal.extraTls "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
   rules:
-    {{- if .Values.ingressInternal.extraHosts }}
-    {{- include "chart.render" (dict "value" .Values.ingressInternal.extraHosts "context" $) | nindent 4 }}
+    {{- if .Values.networking.ingressInternal.extraHosts }}
+    {{- include "chart.render" (dict "value" .Values.networking.ingressInternal.extraHosts "context" $) | nindent 4 }}
     {{- end }}
-    {{- range .Values.ingressInternal.hosts }}
+    {{- range .Values.networking.ingressInternal.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
-          {{- if $.Values.ingressInternal.extraPaths }}
-          {{- include "chart.render" (dict "value" $.Values.ingressInternal.extraPaths "context" $) | nindent 10 }}
+          {{- if $.Values.networking.ingressInternal.extraPaths }}
+          {{- include "chart.render" (dict "value" $.Values.networking.ingressInternal.extraPaths "context" $) | nindent 10 }}
           {{- end }}
 
           {{- range .paths }}

@@ -1,4 +1,4 @@
-{{- if eq .Values.kind "Deployment" -}}
+{{- if eq .Values.workload.kind "Deployment" -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -8,13 +8,13 @@ metadata:
     {{- with .Values.extraLabels }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
-  {{- with .Values.deployment.annotations }}
+  {{- with .Values.workload.deployment.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
+  {{- if not .Values.scaling.autoscaling.enabled }}
+  replicas: {{ .Values.workload.replicaCount }}
   {{- end }}
   {{- with .Values.updateStrategy }}
   strategy:
@@ -26,13 +26,13 @@ spec:
       {{- include "chartname.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      {{- with .Values.workload.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if .Values.openTelemetry.instrumentation.enabled }}
+      {{- if .Values.observability.openTelemetry.instrumentation.enabled }}
       annotations:
-        instrumentation.opentelemetry.io/inject-{{ .Values.openTelemetry.instrumentation.language }}: "true"
+        instrumentation.opentelemetry.io/inject-{{ .Values.observability.openTelemetry.instrumentation.language }}: "true"
       {{- end }}
       labels:
         {{- include "chartname.selectorLabels" . | nindent 8 }}
@@ -40,7 +40,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -65,7 +65,7 @@ spec:
       dnsConfig:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.podSecurityContext }}
+      {{- with .Values.workload.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -75,85 +75,85 @@ spec:
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          {{- with .Values.securityContext }}
+          {{- with .Values.workload.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- with .Values.workingDir }}
           workingDir: {{ . | quote }}
           {{- end }}
-          {{- with .Values.command }}
+          {{- with .Values.workload.command }}
           command:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.args }}
+          {{- with .Values.workload.args }}
           args:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.workload.image.repository }}:{{ .Values.workload.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.workload.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ .Values.networking.service.port }}
               protocol: TCP
-          {{- with .Values.env }}
+          {{- with .Values.workload.env }}
           env:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if or .Values.extraEnvFromConfigMap .Values.extraEnvFromSecret .Values.sealedSecrets.enabled }}
+          {{- if or .Values.config.extraEnvFromConfigMap .Values.config.extraEnvFromSecret .Values.config.sealedSecrets.enabled }}
           envFrom:
-            {{- range .Values.extraEnvFromConfigMap }}
+            {{- range .Values.config.extraEnvFromConfigMap }}
             - configMapRef:
                 name: {{ tpl . $ }}
             {{- end }}
-            {{- range .Values.extraEnvFromSecret }}
+            {{- range .Values.config.extraEnvFromSecret }}
             - secretRef:
                 name: {{ tpl . $ }}
             {{- end }}
-            {{- if .Values.sealedSecrets.enabled }}
+            {{- if .Values.config.sealedSecrets.enabled }}
             - secretRef:
                 name: {{ include "chartname.fullname" . }}
             {{- end }}
           {{- end }}
-          {{- if and .Values.startupProbe .Values.startupProbe.enabled }}
+          {{- if and .Values.workload.probes.startup .Values.workload.probes.startup.enabled }}
           startupProbe:
-            {{- $probe := omit .Values.startupProbe "enabled" }}
+            {{- $probe := omit .Values.workload.probes.startup "enabled" }}
             {{- if or $probe.tcpSocket $probe.exec $probe.grpc }}
             {{- $probe = omit $probe "httpGet" }}
             {{- end }}
             {{- toYaml $probe | nindent 12 }}
           {{- end }}          
-          {{- if and .Values.livenessProbe .Values.livenessProbe.enabled }}
+          {{- if and .Values.workload.probes.liveness .Values.workload.probes.liveness.enabled }}
           livenessProbe:
-            {{- $probe := omit .Values.livenessProbe "enabled" }}
+            {{- $probe := omit .Values.workload.probes.liveness "enabled" }}
             {{- if or $probe.tcpSocket $probe.exec $probe.grpc }}
             {{- $probe = omit $probe "httpGet" }}
             {{- end }}
             {{- toYaml $probe | nindent 12 }}
           {{- end }}
-          {{- if and .Values.readinessProbe .Values.readinessProbe.enabled }}
+          {{- if and .Values.workload.probes.readiness .Values.workload.probes.readiness.enabled }}
           readinessProbe:
-            {{- $probe := omit .Values.readinessProbe "enabled" }}
+            {{- $probe := omit .Values.workload.probes.readiness "enabled" }}
             {{- if or $probe.tcpSocket $probe.exec $probe.grpc }}
             {{- $probe = omit $probe "httpGet" }}
             {{- end }}
             {{- toYaml $probe | nindent 12 }}
           {{- end }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml .Values.workload.resources | nindent 12 }}
           volumeMounts:
-            {{- if .Values.persistence.enabled }}
-              {{- if .Values.persistence.claims }}
-                {{- range .Values.persistence.claims }}
+            {{- if .Values.storage.persistence.enabled }}
+              {{- if .Values.storage.persistence.claims }}
+                {{- range .Values.storage.persistence.claims }}
             - name: {{ .name }}
               mountPath: {{ .mountPath | default (printf "/data/%s" .name) }}
                 {{- end }}
               {{- else }}
-            - name: {{ .Values.persistence.name | default "storage" }}
-              mountPath: {{ .Values.persistence.mountPath | default "/data" }}
+            - name: {{ .Values.storage.persistence.name | default "storage" }}
+              mountPath: {{ .Values.storage.persistence.mountPath | default "/data" }}
               {{- end }}
             {{- end }}
-            {{- range .Values.extraConfigMaps }}
+            {{- range .Values.config.extraConfigMaps }}
             - name: {{ .name }}
               mountPath: {{ .mountPath }}
               {{- if .subPath }}
@@ -161,7 +161,7 @@ spec:
               {{- end }}
               readOnly: {{ .readOnly | default true }}
             {{- end }}
-            {{- range .Values.extraSecrets }}
+            {{- range .Values.config.extraSecrets }}
             - name: {{ .name }}
               mountPath: {{ .mountPath }}
               {{- if .subPath }}
@@ -169,13 +169,13 @@ spec:
               {{- end }}
               readOnly: {{ .readOnly | default true }}
             {{- end }}
-            {{- with .Values.volumeMounts }}
+            {{- with .Values.storage.volumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
-            {{- if .Values.extraVolumeMounts }}
-            {{- include "chart.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- if .Values.storage.extraVolumeMounts }}
+            {{- include "chart.render" (dict "value" .Values.storage.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
-          {{- with .Values.lifecycle }}
+          {{- with .Values.workload.lifecycle }}
           lifecycle:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -183,44 +183,44 @@ spec:
         {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
       volumes:
-        {{- if .Values.persistence.enabled }}
-          {{- if .Values.persistence.claims }}
-            {{- range .Values.persistence.claims }}
+        {{- if .Values.storage.persistence.enabled }}
+          {{- if .Values.storage.persistence.claims }}
+            {{- range .Values.storage.persistence.claims }}
         - name: {{ .name }}
           persistentVolumeClaim:
             claimName: {{ include "chartname.fullname" $ }}-{{ .name }}
             {{- end }}
           {{- else }}
-        - name: {{ .Values.persistence.name | default "storage" }}
+        - name: {{ .Values.storage.persistence.name | default "storage" }}
           persistentVolumeClaim:
-            claimName: {{ default (include "chartname.fullname" .) .Values.persistence.existingClaim }}
+            claimName: {{ default (include "chartname.fullname" .) .Values.storage.persistence.existingClaim }}
           {{- end }}
         {{- end }}
-        {{- range .Values.extraConfigMaps }}
+        {{- range .Values.config.extraConfigMaps }}
         - name: {{ .name }}
           configMap:
             name: {{ .existingName | default .name }}
             defaultMode: {{ .defaultMode | default 420 }}
         {{- end }}
-        {{- range .Values.extraSecrets }}
+        {{- range .Values.config.extraSecrets }}
         - name: {{ .name }}
           secret:
             secretName: {{ .existingName | default .name }}
             defaultMode: {{ .defaultMode | default 420 }}
         {{- end }}
-        {{- with .Values.volumes }}
+        {{- with .Values.storage.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if .Values.extraVolumes }}
-        {{- include "chart.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+        {{- if .Values.storage.extraVolumes }}
+        {{- include "chart.render" (dict "value" .Values.storage.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
-      {{- with .Values.nodeSelector }}
+      {{- with .Values.workload.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       affinity:
         {{- include "chartname.affinity" . | nindent 8 }} 
-      {{- with .Values.tolerations }}
+      {{- with .Values.workload.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}

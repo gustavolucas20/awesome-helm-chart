@@ -1,4 +1,4 @@
-{{- range .Values.extraConfigMaps -}}
+{{- range .Values.config.extraConfigMaps -}}
 {{- if or .data .fromFile .fromFolder -}}
 apiVersion: v1
 kind: ConfigMap

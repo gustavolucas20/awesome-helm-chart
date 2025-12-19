@@ -1,0 +1,307 @@
+# Default values for helm-primedb.
+# This template organizes parameters into logical functional groups.
+
+# =============================================================================
+# 1. GLOBAL & APPLICATION CORE
+# =============================================================================
+# kind can be: Deployment or StatefulSet
+kind: Deployment
+replicaCount: 1
+
+nameOverride: ""
+fullnameOverride: ""
+
+imagePullSecrets: []
+revisionHistoryLimit: 3
+
+statefulset:
+  annotations: {}
+
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+workingDir: ""
+command: []
+args: []
+
+env: []
+  # - name: VAR_NAME
+  #   value: "value"
+
+# Extra ConfigMaps/Secrets to load as environment variables (envFrom)
+extraEnvFromConfigMap: []
+  # - my-config-map
+  # - "{{ include \"chartname.fullname\" . }}-dynamic-config"
+
+extraEnvFromSecret: []
+  # - my-secret
+  # - "{{ include \"chartname.fullname\" . }}-eso-secret"
+
+# Optional: Configuration for SealedSecrets / Global Secrets
+sealedSecrets:
+  enabled: false
+
+resources: {}
+
+startupProbe:
+  enabled: false
+  httpGet:
+    path: /
+    port: http
+  failureThreshold: 30
+  periodSeconds: 10
+
+livenessProbe:
+  enabled: false
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: false
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
+updateStrategy: {}
+terminationGracePeriodSeconds: 30
+lifecycle: {}
+
+# =============================================================================
+# 2. CONFIGURATION & EXTERNAL SECRETS
+# =============================================================================
+# Path to the directory containing configuration subfolders.
+# The chart will dynamically create one ConfigMap for each subfolder found here.
+configFilesPath: "files"
+
+# Additional ConfigMaps to be created and mounted
+# Each entry will create a ConfigMap and mount it to the container.
+extraConfigMaps: []
+  # - name: app-config
+  #   mountPath: /etc/myapp
+  #   data:
+  #     config.yaml: |
+  #       key: value
+  # - name: existing-cm
+  #   mountPath: /etc/external
+  #   existingName: my-custom-config
+  # - name: folder-config
+  #   mountPath: /etc/configs
+  #   fromFolder: configs/ # Loads files from helm/files/configs/
+
+# Additional Secrets to be created and mounted
+extraSecrets: []
+  # - name: app-secret
+  #   mountPath: /etc/secret
+  #   data:
+  #     apiKey: "my-secret-key"
+  # - name: existing-secret
+  #   mountPath: /etc/db
+  #   existingName: db-credentials
+
+configMaps:
+  enabled: false # Legacy - will be removed in future versions
+
+secrets:
+  enabled: false # Legacy - will be removed in future versions
+
+secretStore:
+  enabled: false
+  provider: {}
+
+externalSecret:
+  enabled: false
+  secretStoreRef:
+    name: ""
+    kind: SecretStore
+  target:
+    creationPolicy: Owner
+  refreshInterval: "1h"
+  data: []
+  dataFrom: []
+
+# =============================================================================
+# 3. NETWORKING & TRAFFIC MANAGEMENT
+# =============================================================================
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: http
+  protocol: TCP
+  name: http
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  extraHosts: []
+  extraPaths: []
+  extraTls: []
+  tls:
+    enabled: false
+    secretName: ""
+
+ingressInternal:
+  enabled: false
+  className: nginx-internal
+  annotations: {}
+  hosts:
+    - host: chart-example-internal.local
+      paths:
+        - path: /
+          pathType: Prefix
+  extraHosts: []
+  extraPaths: []
+  extraTls: []
+  tls:
+    enabled: true
+    secretName: ""
+
+gateway:
+  enabled: false
+  gatewayClass:
+    enabled: false
+    controllerName: "example.com/gateway-controller"
+  gatewayClassName: ""
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+  parentRefs: []
+  hostnames: []
+  rules: []
+
+hostAliases: []
+dnsPolicy: ClusterFirst
+dnsConfig: {}
+
+# =============================================================================
+# 4. PERSISTENCE & STORAGE
+# =============================================================================
+persistence:
+  enabled: true
+  storageClass: "oci-bv-retain"
+  accessModes: ["ReadWriteOnce"]
+  size: 50Gi
+  claims: []
+  name: ""
+  mountPath: "/data"
+  existingClaim: ""
+
+volumeClaimTemplates: []
+
+initContainers: []
+extraContainers: []
+volumes: []
+volumeMounts: []
+extraVolumes: []
+extraVolumeMounts: []
+
+# =============================================================================
+# 5. OBSERVABILITY
+# =============================================================================
+monitoring:
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    path: /metrics
+    port: http
+    additionalLabels: {}
+  prometheusRules:
+    enabled: false
+    additionalLabels: {}
+    groups: []
+
+openTelemetry:
+  enabled: false
+  mode: deployment
+  config: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+    exporters:
+      otlphttp:
+        endpoint: "http://tempo.svc.cluster.local:4318"
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          exporters: [otlphttp]
+
+  instrumentation:
+    enabled: false
+    sampler:
+      type: parentbased_traceid
+      argument: "1"
+    language: java # java, python, dotnet, nodejs
+
+# =============================================================================
+# 6. SECURITY & RBAC
+# =============================================================================
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+networkPolicy:
+  enabled: false
+  podSelector: {}
+  policyTypes: ["Ingress"]
+  ingress: []
+  egress: []
+
+podSecurityContext: {}
+securityContext: {}
+
+# =============================================================================
+# 7. SCHEDULING & SCALING
+# =============================================================================
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+pdb:
+  enabled: false
+  minAvailable: 1
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+priorityClassName: ""
+schedulerName: ""
+
+# =============================================================================
+# 8. HOOKS, CRONS & ADVANCED
+# =============================================================================
+cronJobs: []
+extraObjects: []
+extraLabels: {}
+podAnnotations: {}
+commonAnnotations: {}
+deployment:
+  annotations: {}

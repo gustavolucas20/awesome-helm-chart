@@ -30,17 +30,17 @@ spec:
           annotations:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if $.Values.openTelemetry.instrumentation.enabled }}
-            instrumentation.opentelemetry.io/inject-{{ $.Values.openTelemetry.instrumentation.language }}: "true"
+          {{- if $.Values.observability.openTelemetry.instrumentation.enabled }}
+            instrumentation.opentelemetry.io/inject-{{ $.Values.observability.openTelemetry.instrumentation.language }}: "true"
           {{- end }}
         spec:
-          {{- with $.Values.imagePullSecrets }}
+          {{- with $.Values.global.imagePullSecrets }}
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           serviceAccountName: {{ ($job.serviceAccount | default dict).name | default (include "chartname.serviceAccountName" $) }}
           securityContext:
-            {{- toYaml ($job.podSecurityContext | default $.Values.podSecurityContext) | nindent 12 }}
+            {{- toYaml ($job.podSecurityContext | default $.Values.workload.podSecurityContext) | nindent 12 }}
           restartPolicy: {{ $job.restartPolicy | default "OnFailure" }}
           {{- with $job.initContainers }}
           initContainers:
@@ -50,7 +50,7 @@ spec:
           {{- range $container := $job.containers }}
             - name: {{ $container.name }}
               securityContext:
-                {{- toYaml ($container.securityContext | default $.Values.securityContext) | nindent 16 }}
+                {{- toYaml ($container.securityContext | default $.Values.workload.securityContext) | nindent 16 }}
               image: "{{ $container.image }}"
               imagePullPolicy: {{ $container.imagePullPolicy | default "IfNotPresent" }}
               {{- with $container.command }}
@@ -62,7 +62,7 @@ spec:
                 {{- toYaml . | nindent 16 }}
               {{- end }}
               resources:
-                {{- toYaml ($container.resources | default $.Values.resources) | nindent 16 }}
+                {{- toYaml ($container.resources | default $.Values.workload.resources) | nindent 16 }}
               {{- with $container.volumeMounts }}
               volumeMounts:
                 {{- toYaml . | nindent 16 }}

@@ -3,7 +3,7 @@ Expand the name of the chart.
 Cria o nome completo base (Ex: myapp-production)
 */}}
 {{- define "chartname.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- default .Chart.Name .Values.global.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
@@ -11,10 +11,10 @@ Create a default fully qualified app name.
 Define o nome completo do recurso: {{.Release.Name}}-{{template "chartname.name" .}}
 */}}
 {{- define "chartname.fullname" -}}
-{{- if .Values.fullnameOverride -}}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- if .Values.global.fullnameOverride -}}
+{{- .Values.global.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
+{{- $name := default .Chart.Name .Values.global.nameOverride -}}
 {{- if contains $name .Release.Name -}}
 {{- .Release.Name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
@@ -58,10 +58,10 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Create the name of the service account to use
 */}}
 {{- define "chartname.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create -}}
-    {{- default (include "chartname.fullname" .) .Values.serviceAccount.name -}}
+{{- if .Values.security.serviceAccount.create -}}
+    {{- default (include "chartname.fullname" .) .Values.security.serviceAccount.name -}}
 {{- else -}}
-    {{- default "default" .Values.serviceAccount.name -}}
+    {{- default "default" .Values.security.serviceAccount.name -}}
 {{- end -}}
 {{- end -}}
 

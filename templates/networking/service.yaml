@@ -5,11 +5,11 @@ metadata:
   labels:
     {{- include "chartname.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.service.type }}
+  type: {{ .Values.networking.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: {{ .Values.service.targetPort }}
-      protocol: {{ .Values.service.protocol }}
-      name: {{ .Values.service.name }}
+    - port: {{ .Values.networking.service.port }}
+      targetPort: {{ .Values.networking.service.targetPort }}
+      protocol: {{ .Values.networking.service.protocol }}
+      name: {{ .Values.networking.service.name }}
   selector:
     {{- include "chartname.selectorLabels" . | nindent 4 }}

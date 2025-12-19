@@ -3,8 +3,8 @@ Affinity template.
 Values.affinity is used if present.
 */}}
 {{- define "chartname.affinity" -}}
-{{- if .Values.affinity -}}
-{{- toYaml .Values.affinity -}}
+{{- if .Values.workload.affinity -}}
+{{- toYaml .Values.workload.affinity -}}
 {{- else -}}
 podAntiAffinity:
   preferredDuringSchedulingIgnoredDuringExecution:

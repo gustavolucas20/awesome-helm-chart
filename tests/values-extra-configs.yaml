@@ -1,27 +1,29 @@
 # Test case for extraConfigMaps and extraSecrets
-kind: Deployment
+workload:
+  kind: Deployment
 
-extraConfigMaps:
-  - name: app-config
-    mountPath: /etc/config
-    data:
-      app.yaml: |
-        environment: test
-        debug: true
+config:
+  extraConfigMaps:
+    - name: app-config
+      mountPath: /etc/config
+      data:
+        app.yaml: |
+          environment: test
+          debug: true
 
-  - name: scripts-from-folder
-    mountPath: /scripts
-    fromFolder: scripts
+    - name: scripts-from-folder
+      mountPath: /scripts
+      fromFolder: scripts
 
-extraSecrets:
-  - name: db-credentials
-    mountPath: /secrets
-    data:
-      username: admin
-      password: secret123
+  extraSecrets:
+    - name: db-credentials
+      mountPath: /secrets
+      data:
+        username: admin
+        password: secret123
 
-extraEnvFromConfigMap:
-  - app-config
+  extraEnvFromConfigMap:
+    - app-config
 
-extraEnvFromSecret:
-  - db-credentials
+  extraEnvFromSecret:
+    - db-credentials

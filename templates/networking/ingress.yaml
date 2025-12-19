@@ -1,7 +1,7 @@
-{{- if .Values.ingress.enabled }}
+{{- if .Values.networking.ingress.enabled }}
 
 {{- $fullName := include "chartname.fullname" . }}
-{{- $svcPort := .Values.service.port }}
+{{- $svcPort := .Values.networking.service.port }}
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -9,38 +9,38 @@ metadata:
   name: {{ $fullName }}
   labels:
     {{- include "chartname.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
+  {{- with .Values.networking.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 
 spec:
-  ingressClassName: {{ .Values.ingress.className | default "nginx" }}
+  ingressClassName: {{ .Values.networking.ingress.className | default "nginx" }}
 
-  {{- if .Values.ingress.tls.enabled }}
+  {{- if .Values.networking.ingress.tls.enabled }}
   tls:
     - hosts:
-        {{- range .Values.ingress.hosts }}
+        {{- range .Values.networking.ingress.hosts }}
         - {{ .host | quote }}
         {{- end }}
-      secretName: {{ default (printf "%s-tls" $fullName) .Values.ingress.tls.secretName }}
+      secretName: {{ default (printf "%s-tls" $fullName) .Values.networking.ingress.tls.secretName }}
 
-    {{- if .Values.ingress.extraTls }}
-    {{- include "chart.render" (dict "value" .Values.ingress.extraTls "context" $) | nindent 4 }}
+    {{- if .Values.networking.ingress.extraTls }}
+    {{- include "chart.render" (dict "value" .Values.networking.ingress.extraTls "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
 
   rules:
-    {{- if .Values.ingress.extraHosts }}
-    {{- include "chart.render" (dict "value" .Values.ingress.extraHosts "context" $) | nindent 4 }}
+    {{- if .Values.networking.ingress.extraHosts }}
+    {{- include "chart.render" (dict "value" .Values.networking.ingress.extraHosts "context" $) | nindent 4 }}
     {{- end }}
 
-    {{- range .Values.ingress.hosts }}
+    {{- range .Values.networking.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
-          {{- if $.Values.ingress.extraPaths }}
-          {{- include "chart.render" (dict "value" $.Values.ingress.extraPaths "context" $) | nindent 10 }}
+          {{- if $.Values.networking.ingress.extraPaths }}
+          {{- include "chart.render" (dict "value" $.Values.networking.ingress.extraPaths "context" $) | nindent 10 }}
           {{- end }}
 
           {{- range .paths }}
