@@ -1,24 +1,25 @@
 # Ingress Reflector TLS test case
-ingress:
-  enabled: true
-  hosts:
-    - host: my-app.com
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls:
+networking:
+  ingress:
     enabled: true
-    secretName: my-app-tls
-    reflectsFrom: "cert-manager/main-tls"
+    hosts:
+      - host: my-app.com
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      enabled: true
+      secretName: my-app-tls
+      reflectsFrom: "cert-manager/main-tls"
 
-ingressInternal:
-  enabled: true
-  hosts:
-    - host: my-app-internal.local
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls:
+  ingressInternal:
     enabled: true
-    secretName: my-app-internal-tls
-    reflectsFrom: "cert-manager/internal-tls"
+    hosts:
+      - host: my-app-internal.local
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      enabled: true
+      secretName: my-app-internal-tls
+      reflectsFrom: "cert-manager/internal-tls"
