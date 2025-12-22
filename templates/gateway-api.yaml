@@ -1,3 +1,27 @@
+{{- if .Values.networking.gateway.gatewayClass.enabled -}}
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: {{ include "chartname.fullname" . }}
+  labels:
+    {{- include "chartname.labels" . | nindent 4 }}
+spec:
+  controllerName: {{ .Values.networking.gateway.gatewayClass.controllerName }}
+{{- end }}
+---
+{{- if .Values.networking.gateway.enabled -}}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ include "chartname.fullname" . }}
+  labels:
+    {{- include "chartname.labels" . | nindent 4 }}
+spec:
+  gatewayClassName: {{ .Values.networking.gateway.gatewayClassName | default (include "chartname.fullname" .) }}
+  listeners:
+    {{- toYaml .Values.networking.gateway.listeners | nindent 4 }}
+{{- end }}
+---
 {{- if .Values.networking.gateway.enabled -}}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

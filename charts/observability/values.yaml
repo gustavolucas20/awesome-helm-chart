@@ -1,0 +1,63 @@
+# Observability Subchart Values
+# This subchart provides monitoring and tracing capabilities
+
+# =============================================================================
+# PROMETHEUS MONITORING
+# =============================================================================
+monitoring:
+  # ServiceMonitor for Prometheus Operator
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    path: /metrics
+    port: http
+    additionalLabels: {}
+
+  # PrometheusRules for alerting
+  prometheusRules:
+    enabled: false
+    additionalLabels: {}
+    groups: []
+      # - name: example-alerts
+      #   interval: 30s
+      #   rules:
+      #     - alert: HighErrorRate
+      #       expr: rate(http_requests_total{status="500"}[5m]) > 0.05
+      #       for: 5m
+      #       labels:
+      #         severity: critical
+      #       annotations:
+      #         summary: "High error rate detected"
+
+# =============================================================================
+# OPENTELEMETRY
+# =============================================================================
+openTelemetry:
+  # OpenTelemetry Collector
+  enabled: false
+  mode: deployment # deployment, daemonset, statefulset
+
+  # Collector configuration
+  config: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+    exporters:
+      otlphttp:
+        endpoint: "http://tempo.svc.cluster.local:4318"
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          exporters: [otlphttp]
+
+  # Auto-instrumentation
+  instrumentation:
+    enabled: false
+    sampler:
+      type: parentbased_traceidratio
+      argument: "1"
+    language: java # java, python, dotnet, nodejs, go, ruby, php, apacheHttpd

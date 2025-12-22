@@ -298,9 +298,14 @@ scaling:
     targetCPUUtilizationPercentage: 80
 
 # =============================================================================
-# OBSERVABILITY
+# OBSERVABILITY (Subchart)
 # =============================================================================
+# Observability features are now provided by a subchart
+# Enable/disable the entire subchart and configure its components below
 observability:
+  # Enable/disable observability subchart
+  enabled: false
+
   # Prometheus Monitoring
   monitoring:
     serviceMonitor:
