@@ -9,7 +9,7 @@ spec:
   controllerName: {{ .Values.networking.gateway.gatewayClass.controllerName }}
 {{- end }}
 ---
-{{- if .Values.networking.gateway.enabled -}}
+{{ if .Values.networking.gateway.enabled -}}
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -24,7 +24,7 @@ spec:
     {{- toYaml .Values.networking.gateway.listeners | nindent 4 }}
 {{- end }}
 ---
-{{- if .Values.networking.gateway.enabled -}}
+{{ if .Values.networking.gateway.enabled -}}
 {{- range $name, $route := .Values.networking.gateway.routes }}
 {{- if $route.enabled }}
 ---
@@ -58,6 +58,5 @@ spec:
       - name: {{ $route.backendName | default (include "chartname.fullname" $) }}
         port: {{ $route.backendPort | default $.Values.networking.service.port }}
     {{- end }}
-{{- end }}
 {{- end }}
 {{- end }}
