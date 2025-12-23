@@ -156,21 +156,27 @@ networking:
 
   # Gateway API
   gateway:
-    enabled: false
-    gatewayClass:
-      enabled: false
-      controllerName: "example.com/gateway-controller"
+    enabled: true
+    annotations: {}
     gatewayClassName: ""
+    gatewayClass:
+      enabled: true
+      controllerName: ""
     listeners:
       - name: http
-        port: 80
+        port: ""
         protocol: HTTP
-        allowedRoutes:
-          namespaces:
-            from: Same
-    parentRefs: []
-    hostnames: []
-    rules: []
+        allowedRoutes: { namespaces: { from: Same } }
+    routes:
+      web:
+        enabled: false
+        kind: HTTPRoute
+        matches:
+          - path: { type: PathPrefix, value: / }
+      api:
+        enabled: false
+        kind: GRPCRoute
+        backendPort: 50051
 
   # Network Policy
   networkPolicy:
@@ -241,12 +247,6 @@ config:
     enabled: false
     provider: {}
 
-  # Legacy (deprecated)
-  configMaps:
-    enabled: false
-  secrets:
-    enabled: false
-
 # =============================================================================
 # SECURITY & RBAC
 # =============================================================================
@@ -268,7 +268,7 @@ security:
 storage:
   # Persistence
   persistence:
-    enabled: true
+    enabled: false
     storageClass: "oci-bv-retain"
     accessModes: ["ReadWriteOnce"]
     size: 50Gi
