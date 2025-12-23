@@ -271,6 +271,7 @@ storage:
 
 ```yaml
 observability:
+  enabled: true  # Enable the observability subchart
   monitoring:
     serviceMonitor:
       enabled: true
@@ -325,14 +326,16 @@ The chart uses an enterprise-grade organization:
 ```
 templates/
 ├── workloads/       # Deployment, StatefulSet, CronJob
-├── networking/      # Service, Ingress, Gateway, NetworkPolicy
+├── networking/      # Service, Ingress, Gateway API (unified), NetworkPolicy
 ├── config/          # ConfigMaps, Secrets, ExternalSecret
 ├── security/        # ServiceAccount, PDB, Certificates
 ├── storage/         # PersistentVolumeClaim
 ├── scaling/         # HPA
-├── observability/   # ServiceMonitor, OpenTelemetry, Prometheus
 ├── extra/           # Custom resources
 └── helpers/         # Helper templates
+
+charts/
+└── observability/   # Subchart for ServiceMonitor, OpenTelemetry, Prometheus
 ```
 
 ## Advanced Examples
@@ -423,6 +426,7 @@ scaling:
     targetCPUUtilizationPercentage: 70
 
 observability:
+  enabled: true
   monitoring:
     serviceMonitor:
       enabled: true
