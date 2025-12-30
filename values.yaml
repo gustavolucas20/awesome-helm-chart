@@ -1,52 +1,65 @@
-# Default values for helm-primedb.
-# Enterprise-grade organization with categorized parameters.
-
 # =============================================================================
 # GLOBAL SETTINGS
 # =============================================================================
 global:
-  nameOverride: ""
-  fullnameOverride: ""
+  nameOverride: "" # "my-app"
+  fullnameOverride: "" # "my-app-fullname"
   commonLabels: {}
+  # environment: production
+  # team: backend
   commonAnnotations: {}
+  # project.io/id: "123"
   imagePullSecrets: []
+  # - name: regcred
 
 # =============================================================================
-# WORKLOAD CONFIGURATION
+# MAIN WORKLOAD (App Controller)
 # =============================================================================
 workload:
-  # Type: Deployment or StatefulSet
-  kind: Deployment
+  kind: Deployment # Deployment or StatefulSet
   replicaCount: 1
   revisionHistoryLimit: 3
 
-  # Image configuration
   image:
     repository: nginx
     pullPolicy: IfNotPresent
-    tag: ""
+    tag: "" # "1.2.3"
 
-  # Container configuration
-  workingDir: ""
-  command: []
-  args: []
-  lifecycle: {}
-
-  # Environment variables
+  # Environment
   env: []
-    # - name: VAR_NAME
-    #   value: "value"
+  # - name: ENV_VAR
+  #   value: "value"
+  extraEnvVars: {}
+  # DB_HOST: "localhost"
+  extraRefEnvVars: {}
+  # DB_PASSWORD:
+  #   secretName: my-secret
+  #   key: password
 
-  # Resource limits and requests
+  # Container Config
+  workingDir: "" # "/app"
+  command: [] # ["/bin/sh"]
+  args: [] # ["-c", "echo hello"]
+  lifecycle: {}
+  # preStop:
+  #   exec:
+  #     command: ["/bin/sh", "-c", "sleep 10"]
   resources: {}
-    # limits:
-    #   cpu: 100m
-    #   memory: 128Mi
-    # requests:
-    #   cpu: 100m
-    #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # limits:
+  #   cpu: 200m
+  #   memory: 256Mi
 
-  # Health probes
+  # Security
+  podSecurityContext: {}
+  # fsGroup: 2000
+  securityContext: {}
+  # runAsUser: 1000
+  # readOnlyRootFilesystem: true
+
+  # Probes
   probes:
     startup:
       enabled: false
@@ -55,7 +68,6 @@ workload:
         port: http
       failureThreshold: 30
       periodSeconds: 10
-
     liveness:
       enabled: false
       httpGet:
@@ -65,7 +77,6 @@ workload:
       periodSeconds: 10
       timeoutSeconds: 5
       failureThreshold: 3
-
     readiness:
       enabled: false
       httpGet:
@@ -77,251 +88,286 @@ workload:
       successThreshold: 1
       failureThreshold: 3
 
-  # Deployment/StatefulSet specific
-  updateStrategy: {}
-  terminationGracePeriodSeconds: 30
-
-  # StatefulSet specific
-  statefulset:
-    annotations: {}
-
-  # Deployment specific
-  deployment:
-    annotations: {}
-
-  # Pod configuration
-  podAnnotations: {}
-  podSecurityContext: {}
-  securityContext: {}
-
-  # Scheduling
+  # Scheduling & Networking
   nodeSelector: {}
+  # disktype: ssd
   tolerations: []
+  # - key: "key"
+  #   operator: "Equal"
+  #   value: "value"
+  #   effect: "NoSchedule"
   affinity: {}
-  priorityClassName: ""
-  schedulerName: ""
+  # podAntiAffinity:
+  #   preferredDuringSchedulingIgnoredDuringExecution:
+  #   - weight: 100
+  #     podAffinityTerm:
+  #       labelSelector:
+  #         matchExpressions:
+  #         - key: app
+  #           operator: In
+  #           values:
+  #           - my-app
+  #       topologyKey: kubernetes.io/hostname
+  priorityClassName: "" # "high-priority"
+  schedulerName: "" # "my-scheduler"
   hostAliases: []
+  # - ip: "127.0.0.1"
+  #   hostnames:
+  #   - "foo.local"
   dnsPolicy: ClusterFirst
   dnsConfig: {}
+  # nameservers:
+  #   - 1.2.3.4
+  # searches:
+  #   - ns1.svc.cluster-domain.example
+  # options:
+  #   - name: ndots
+  #     value: "2"
 
-  # Additional containers
+  # Additional Containers
   initContainers: []
+  # - name: init-myservice
+  #   image: busybox
+  #   command: ['sh', '-c', 'echo The app is running! && sleep 3600']
   extraContainers: []
+  # - name: sidecar
+  #   image: sidecar:1.0
+  containerPorts: {}
+  # http: 8080
+  # metrics: 9090
+
+  # Type Specific Attributes
+  deployment:
+    annotations: {}
+    # meta.helm.sh/release-name: "my-release"
+  statefulset:
+    annotations: {}
+    # meta.helm.sh/release-name: "my-release"
+  updateStrategy:
+    type: RollingUpdate
+  terminationGracePeriodSeconds: 30
+  podAnnotations: {}
 
 # =============================================================================
-# NETWORKING
+# COMPONENTS
 # =============================================================================
-networking:
-  # Service configuration
-  service:
-    type: ClusterIP
-    port: 80
-    targetPort: http
-    protocol: TCP
-    name: http
 
-  # Ingress configuration
-  ingress:
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: http
+  protocol: TCP
+  name: http
+
+  # Advanced
+  ports: []
+  # - name: https
+  #   port: 443
+  #   targetPort: 8443
+  #   protocol: TCP
+  annotations: {}
+  # service.beta.kubernetes.io/aws-load-balancer-type: nlb
+  headless: false
+  clusterIP: "" # "None" or specific IP
+  externalTrafficPolicy: Cluster
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  # kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  extraHosts: []
+  # - host: chart-example.org
+  #   paths:
+  #     - path: /
+  #       pathType: ImplementationSpecific
+  extraPaths: []
+  # - path: /admin
+  #   pathType: Prefix
+  #   backend:
+  #     service:
+  #       name: ssl-redirect
+  #       port:
+  #         name: use-annotation
+  extraTls: []
+  # - hosts:
+  #     - chart-example.org
+  #   secretName: chart-example-tls-extra
+  tls:
     enabled: false
-    className: nginx
-    annotations: {}
-    hosts:
-      - host: chart-example.local
-        paths:
-          - path: /
-            pathType: Prefix
-    extraHosts: []
-    extraPaths: []
-    extraTls: []
-    tls:
-      enabled: false
-      secretName: ""
+    secretName: ""
 
-  # Internal Ingress
-  ingressInternal:
-    enabled: false
-    className: nginx-internal
-    annotations: {}
-    hosts:
-      - host: chart-example-internal.local
-        paths:
-          - path: /
-            pathType: Prefix
-    extraHosts: []
-    extraPaths: []
-    extraTls: []
-    tls:
-      enabled: true
-      secretName: ""
-
-  # Gateway API
-  gateway:
+ingressInternal:
+  enabled: false
+  className: nginx-internal
+  annotations: {}
+  hosts:
+    - host: chart-example-internal.local
+      paths:
+        - path: /
+          pathType: Prefix
+  extraHosts: []
+  extraPaths: []
+  extraTls: []
+  tls:
     enabled: true
-    annotations: {}
-    gatewayClassName: ""
-    gatewayClass:
-      enabled: true
-      controllerName: ""
-    listeners:
-      - name: http
-        port: ""
-        protocol: HTTP
-        allowedRoutes: { namespaces: { from: Same } }
-    routes:
-      web:
-        enabled: false
-        kind: HTTPRoute
-        matches:
-          - path: { type: PathPrefix, value: / }
-      api:
-        enabled: false
-        kind: GRPCRoute
-        backendPort: 50051
+    secretName: ""
 
-  # Network Policy
-  networkPolicy:
-    enabled: false
-    podSelector: {}
-    policyTypes: ["Ingress"]
-    ingress: []
-    egress: []
+gateway:
+  enabled: false
+  routes:
+    web:
+      enabled: false
+      kind: HTTPRoute
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+    api:
+      enabled: false
+      kind: GRPCRoute
+      backendPort: 50051
+
+serviceAccount:
+  create: true
+  annotations: {}
+  # eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/my-role
+  name: "" # "my-service-account"
+
+cronjob:
+  enabled: true
+  jobs: []
+  # - name: "hello-world"
+  #   schedule: "*/5 * * * *"
+  #   command: ["/bin/sh", "-c", "echo hello"]
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+pdb:
+  enabled: false
+  minAvailable: 1
+
+networkPolicy:
+  enabled: false
+  podSelector: {}
+  policyTypes: ["Ingress"]
+  ingress: []
+  egress: []
+
+persistence:
+  enabled: false
+  storageClass: "oci-bv-retain"
+  accessModes: ["ReadWriteOnce"]
+  size: 50Gi
+  claims: []
+  # - name: data
+  #   size: 10Gi
+  #   accessModes: [ReadWriteOnce]
+  #   storageClass: oci-bv
+  name: "" # "my-pvc" if using single claim
+  mountPath: "/data"
+  existingClaim: "" # "my-existing-pvc"
+  # For StatefulSet
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 50Gi
+  # Extras
+  volumes: []
+  # - name: foo
+  #   secret:
+  #     secretName: mysecret
+  #     optional: false
+  volumeMounts: []
+  # - name: foo
+  #   mountPath: "/etc/foo"
+  #   readOnly: true
+  extraVolumes: []
+  extraVolumeMounts: []
 
 # =============================================================================
-# CONFIGURATION MANAGEMENT
+# CONFIGURATION
 # =============================================================================
 config:
-  # Dynamic ConfigMap generation from directory
   configFilesPath: "files"
-
-  # Manual ConfigMaps
   extraConfigMaps: []
-    # - name: app-config
-    #   mountPath: /etc/myapp
-    #   data:
-    #     config.yaml: |
-    #       key: value
-    # - name: existing-cm
-    #   mountPath: /etc/external
-    #   existingName: my-custom-config
-    # - name: folder-config
-    #   mountPath: /etc/configs
-    #   fromFolder: configs/
-
-  # Manual Secrets
+  # - name: my-config
+  #   data:
+  #     key: value
   extraSecrets: []
-    # - name: app-secret
-    #   mountPath: /etc/secret
-    #   data:
-    #     apiKey: "my-secret-key"
-    # - name: existing-secret
-    #   mountPath: /etc/db
-    #   existingName: db-credentials
-
-  # Environment variables from ConfigMaps/Secrets
+  # - name: my-secret
+  #   stringData:
+  #     key: value
   extraEnvFromConfigMap: []
-    # - my-config-map
-    # - "{{ include \"chartname.fullname\" . }}-dynamic-config"
-
+  # - my-config-map
   extraEnvFromSecret: []
-    # - my-secret
-    # - "{{ include \"chartname.fullname\" . }}-eso-secret"
+  # - my-secret
 
-  # SealedSecrets
   sealedSecrets:
     enabled: false
 
-  # External Secrets Operator
   externalSecret:
     enabled: false
     secretStoreRef:
-      name: ""
+      name: "" # "my-secret-store"
       kind: SecretStore
     target:
       creationPolicy: Owner
     refreshInterval: "1h"
     data: []
+    # - secretKey: "key-in-k8s"
+    #   remoteRef:
+    #     key: "key-in-provider"
     dataFrom: []
+    # - key: "all-keys-in-provider"
 
-  # Secret Store
   secretStore:
     enabled: false
-    provider: {}
-
-# =============================================================================
-# SECURITY & RBAC
-# =============================================================================
-security:
-  # Service Account
-  serviceAccount:
-    create: true
-    annotations: {}
-    name: ""
-
-  # Pod Disruption Budget
-  pdb:
-    enabled: false
-    minAvailable: 1
-
-# =============================================================================
-# STORAGE
-# =============================================================================
-storage:
-  # Persistence
-  persistence:
-    enabled: false
-    storageClass: "oci-bv-retain"
-    accessModes: ["ReadWriteOnce"]
-    size: 50Gi
-    claims: []
-    name: ""
-    mountPath: "/data"
-    existingClaim: ""
-
-  # Volume Claim Templates (for StatefulSet)
-  volumeClaimTemplates: []
-
-  # Additional volumes and mounts
-  volumes: []
-  volumeMounts: []
-  extraVolumes: []
-  extraVolumeMounts: []
-
-# =============================================================================
-# SCALING
-# =============================================================================
-scaling:
-  # Horizontal Pod Autoscaler
-  autoscaling:
-    enabled: false
-    minReplicas: 1
-    maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
+    vaultOCID: "ocid1.vault.oc1.ap-singapore-1.gzukg55taadhm.abzwsljrmaynvkdw6342szaoep3hkq6wkbwjg3cdkrflxeusqxgg6fjdbcra"
+    region: "ap-singapore-1"
+    principalType: "UserPrincipal"
+    user: ""
+    tenancy: ""
+    privateKey: ""
+    fingerprint: ""
 
 # =============================================================================
 # OBSERVABILITY (Subchart)
 # =============================================================================
-# Observability features are now provided by a subchart
-# Enable/disable the entire subchart and configure its components below
 observability:
-  # Enable/disable observability subchart
   enabled: false
-
-  # Prometheus Monitoring
-  monitoring:
-    serviceMonitor:
-      enabled: false
-      interval: 30s
-      scrapeTimeout: 10s
-      path: /metrics
-      port: http
-      additionalLabels: {}
-
-    prometheusRules:
-      enabled: false
-      additionalLabels: {}
-      groups: []
-
-  # OpenTelemetry
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    path: /metrics
+    port: http
+    additionalLabels: {}
+    # release: prometheus
+  prometheusRules:
+    enabled: false
+    additionalLabels: {}
+    # role: alert-rules
+    groups: []
+    # - name: my-rules
+    #   rules:
+    #   - alert: MyAlert
+    #     expr: up == 0
+    #     for: 5m
   openTelemetry:
     enabled: false
     mode: deployment
@@ -333,28 +379,31 @@ observability:
             http:
       exporters:
         otlphttp:
-          endpoint: "http://tempo.svc.cluster.local:4318"
+          endpoint: "http://tempo.grafana-lgtm.cluster.local:4318"
       service:
         pipelines:
           traces:
             receivers: [otlp]
             exporters: [otlphttp]
-
     instrumentation:
       enabled: false
       sampler:
         type: parentbased_traceidratio
         argument: "1"
-      language: java # java, python, dotnet, nodejs, go, ruby, php, apacheHttpd
+      language: java
 
 # =============================================================================
-# ADVANCED & CUSTOM
+# EXTRAS
 # =============================================================================
-# CronJobs
-cronJobs: []
 
-# Extra Kubernetes objects
 extraObjects: []
-
-# Extra labels for all resources
+# - apiVersion: v1
+#   kind: Pod
+#   metadata:
+#     name: my-pod
+#   spec:
+#     containers:
+#     - name: my-container
+#       image: nginx
 extraLabels: {}
+# team: ops

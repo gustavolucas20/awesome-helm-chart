@@ -1,4 +1,5 @@
-{{- range $job := .Values.cronJobs }}
+{{- if .Values.cronjob.enabled }}
+{{- range $job := .Values.cronjob.jobs }}
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -71,6 +72,30 @@ spec:
               env:
                 {{- toYaml . | nindent 16 }}
               {{- end }}
+              {{- if $.Values.workload.extraRefEnvVars -}}
+              {{- if kindIs "map" $.Values.workload.extraRefEnvVars -}}
+                {{- range $key, $value := $.Values.workload.extraRefEnvVars }}
+                - name: {{ include "chart.render" (dict "value" $key "context" $) }}
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: {{ include "chart.render" (dict "value" $value "context" $) }}
+                {{- end }}
+              {{- end }}
+              {{- end }}
+              {{- if $.Values.workload.extraEnvVars }}
+              {{- if kindIs "map" $.Values.workload.extraEnvVars -}}
+                {{- range $key, $value := $.Values.workload.extraEnvVars }}
+                - name: {{ include "chart.render" (dict "value" $key "context" $) }}
+                  {{- if kindIs "map" $value -}}
+                  {{ include "chart.render" (dict "value" $value "context" $) | nindent 18 }}
+                  {{- else }}
+                  value: {{ include "chart.render" (dict "value" $value "context" $) | quote}}
+                  {{- end }}
+                {{- end }}
+              {{- else }}
+              {{- include "chart.render" (dict "value" $.Values.workload.extraEnvVars "context" $) | nindent 16 -}}
+              {{- end }}
+              {{- end }}
               {{- with $container.envFrom }}
               envFrom:
                 {{- toYaml . | nindent 16 }}
@@ -88,4 +113,5 @@ spec:
           affinity:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+{{- end }}
 {{- end }}

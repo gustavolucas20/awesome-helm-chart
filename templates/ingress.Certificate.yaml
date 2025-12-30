@@ -4,14 +4,14 @@ Processes ingress and ingressInternal TLS configurations.
 If 'reflectsFrom' is defined, creates a Secret with Reflector annotation.
 */}}
 
-{{- if and .Values.networking.ingress.enabled .Values.networking.ingress.tls.enabled .Values.networking.ingress.tls.reflectsFrom }}
+{{- if and .Values.ingress.enabled .Values.ingress.tls.enabled .Values.ingress.tls.reflectsFrom }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ .Values.networking.ingress.tls.secretName | default (printf "%s-tls" (include "chartname.fullname" .)) }}
+  name: {{ .Values.ingress.tls.secretName | default (printf "%s-tls" (include "chartname.fullname" .)) }}
   annotations:
-    reflector.v1.k8s.emberstack.com/reflects: {{ .Values.networking.ingress.tls.reflectsFrom | quote }}
+    reflector.v1.k8s.emberstack.com/reflects: {{ .Values.ingress.tls.reflectsFrom | quote }}
 type: kubernetes.io/tls
 data:
   # Base64 encoded dummy values to satisfy Secret validation before Reflector syncs
@@ -19,14 +19,14 @@ data:
   tls.key: dGxzLmtleQ==
 {{- end }}
 
-{{- if and .Values.networking.ingressInternal.enabled .Values.networking.ingressInternal.tls.enabled .Values.networking.ingressInternal.tls.reflectsFrom }}
+{{- if and .Values.ingressInternal.enabled .Values.ingressInternal.tls.enabled .Values.ingressInternal.tls.reflectsFrom }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ .Values.networking.ingressInternal.tls.secretName | default (printf "%s-internal-tls" (include "chartname.fullname" .)) }}
+  name: {{ .Values.ingressInternal.tls.secretName | default (printf "%s-internal-tls" (include "chartname.fullname" .)) }}
   annotations:
-    reflector.v1.k8s.emberstack.com/reflects: {{ .Values.networking.ingressInternal.tls.reflectsFrom | quote }}
+    reflector.v1.k8s.emberstack.com/reflects: {{ .Values.ingressInternal.tls.reflectsFrom | quote }}
 type: kubernetes.io/tls
 data:
   # Base64 encoded dummy values to satisfy Secret validation before Reflector syncs

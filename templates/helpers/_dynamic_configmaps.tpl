@@ -5,7 +5,7 @@ This helper renders all files within a specific folder.
 {{- define "chartname.dynamicFileMap.data" -}}
 {{- $context := .context -}}
 {{- $folder := .folder -}}
-{{- $configFilesPath := $context.Values.configFilesPath -}}
+{{- $configFilesPath := $context.Values.config.configFilesPath -}}
 {{/* If folder matches root path, use asterisk to avoid recursive grab of subfolders */}}
 {{- $glob := ternary (printf "%s/*" $configFilesPath) (printf "%s/%s/**" $configFilesPath $folder) (eq $folder $configFilesPath) -}}
 {{- range $path, $bytes := $context.Files.Glob $glob }}
@@ -21,7 +21,7 @@ This helper iterates over the directory structure to find subfolders and generat
 */}}
 {{- define "chartname.dynamicConfigMaps" -}}
 {{- $context := . -}}
-{{- $configFilesPath := .Values.configFilesPath -}}
+{{- $configFilesPath := .Values.config.configFilesPath -}}
 {{- if $configFilesPath }}
 {{- $files := .Files.Glob (printf "%s/**" $configFilesPath) -}}
 {{- $localDict := dict "previous" "-" -}}

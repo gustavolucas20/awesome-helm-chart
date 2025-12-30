@@ -1,11 +1,11 @@
-{{- if .Values.monitoring.serviceMonitor.enabled -}}
+{{- if .Values.serviceMonitor.enabled -}}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: {{ include "observability.fullname" . }}
   labels:
     {{- include "observability.labels" . | nindent 4 }}
-    {{- with .Values.monitoring.serviceMonitor.additionalLabels }}
+    {{- with .Values.serviceMonitor.additionalLabels }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
@@ -17,8 +17,8 @@ spec:
     matchNames:
       - {{ .Release.Namespace }}
   endpoints:
-    - port: {{ .Values.monitoring.serviceMonitor.port }}
-      path: {{ .Values.monitoring.serviceMonitor.path }}
-      interval: {{ .Values.monitoring.serviceMonitor.interval }}
-      scrapeTimeout: {{ .Values.monitoring.serviceMonitor.scrapeTimeout }}
+    - port: {{ .Values.serviceMonitor.port }}
+      path: {{ .Values.serviceMonitor.path }}
+      interval: {{ .Values.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout }}
 {{- end }}

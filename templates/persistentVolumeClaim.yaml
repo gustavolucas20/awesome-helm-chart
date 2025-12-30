@@ -1,5 +1,5 @@
-{{- if .Values.storage.persistence.enabled -}}
-{{- range .Values.storage.persistence.claims -}}
+{{- if .Values.persistence.enabled -}}
+{{- range .Values.persistence.claims -}}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

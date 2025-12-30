@@ -1,15 +1,46 @@
+{{- if .Values.service.enabled }}
 apiVersion: v1
 kind: Service
+{{- if .Values.service.annotations }}
+metadata:
+  name: {{ include "chartname.fullname" . }}
+  annotations:
+    {{- include "chart.render" ( dict "value" .Values.service.annotations "context" $ ) | nindent 4 }}
+  labels:
+    {{- include "chartname.labels" . | nindent 4 }}
+{{- else }}
 metadata:
   name: {{ include "chartname.fullname" . }}
   labels:
     {{- include "chartname.labels" . | nindent 4 }}
+{{- end }}
 spec:
-  type: {{ .Values.networking.service.type }}
+  type: {{ .Values.service.type }}
+  {{- if eq .Values.service.clusterIP "-" }}
+  {{- else if .Values.service.clusterIP }}
+  clusterIP: {{ .Values.service.clusterIP }}
+  {{- else if and (eq .Values.service.type "ClusterIP") .Values.service.headless (lt (int .Values.workload.replicaCount) 2) }}
+  clusterIP: "None"
+  {{- end }}
+  {{- if (or (eq .Values.service.type "LoadBalancer") (eq .Values.service.type "NodePort")) }}
+  externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy | quote }}
+  {{- end }}
+  {{- if .Values.service.ports }}
   ports:
-    - port: {{ .Values.networking.service.port }}
-      targetPort: {{ .Values.networking.service.targetPort }}
-      protocol: {{ .Values.networking.service.protocol }}
-      name: {{ .Values.networking.service.name }}
+  {{- range $port := .Values.service.ports }}
+  {{ $p := fromYaml (include "chart.render" (dict "value" $port "context" $)) }}
+    - name: {{ $p.name }}
+      port: {{ $p.port }}
+      targetPort: {{ $p.targetPort }}
+      protocol: {{ $p.protocol | default "TCP" }}
+  {{- end }}
+  {{- else }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: {{ .Values.service.protocol }}
+      name: {{ .Values.service.name }}
+  {{- end }}
   selector:
     {{- include "chartname.selectorLabels" . | nindent 4 }}
+{{- end }}

@@ -4,31 +4,28 @@
 # =============================================================================
 # PROMETHEUS MONITORING
 # =============================================================================
-monitoring:
-  # ServiceMonitor for Prometheus Operator
-  serviceMonitor:
-    enabled: false
-    interval: 30s
-    scrapeTimeout: 10s
-    path: /metrics
-    port: http
-    additionalLabels: {}
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 10s
+  path: /metrics
+  port: http
+  additionalLabels: {}
 
-  # PrometheusRules for alerting
-  prometheusRules:
-    enabled: false
-    additionalLabels: {}
-    groups: []
-      # - name: example-alerts
-      #   interval: 30s
-      #   rules:
-      #     - alert: HighErrorRate
-      #       expr: rate(http_requests_total{status="500"}[5m]) > 0.05
-      #       for: 5m
-      #       labels:
-      #         severity: critical
-      #       annotations:
-      #         summary: "High error rate detected"
+prometheusRules:
+  enabled: false
+  additionalLabels: {}
+  groups: []
+    # - name: example-alerts
+    #   interval: 30s
+    #   rules:
+    #     - alert: HighErrorRate
+    #       expr: rate(http_requests_total{status="500"}[5m]) > 0.05
+    #       for: 5m
+    #       labels:
+    #         severity: critical
+    #       annotations:
+    #         summary: "High error rate detected"
 
 # =============================================================================
 # OPENTELEMETRY

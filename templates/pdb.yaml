@@ -1,5 +1,5 @@
 {{- include "chartname.validate-pdb" . -}}
-{{- if .Values.security.pdb.enabled -}}
+{{- if .Values.pdb.enabled -}}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
@@ -7,11 +7,11 @@ metadata:
   labels:
     {{- include "chartname.labels" . | nindent 4 }}
 spec:
-  {{- if .Values.security.pdb.minAvailable }}
-  minAvailable: {{ .Values.security.pdb.minAvailable }}
+  {{- if .Values.pdb.minAvailable }}
+  minAvailable: {{ .Values.pdb.minAvailable }}
   {{- end }}
-  {{- if .Values.security.pdb.maxUnavailable }}
-  maxUnavailable: {{ .Values.security.pdb.maxUnavailable }}
+  {{- if .Values.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
   {{- end }}
   selector:
     matchLabels:

@@ -14,14 +14,14 @@ metadata:
   {{- end }}
 spec:
   serviceName: {{ include "chartname.fullname" . }}
-  {{- if not .Values.scaling.autoscaling.enabled }}
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.workload.replicaCount }}
   {{- end }}
   {{- with .Values.workload.updateStrategy }}
   updateStrategy:
     {{- toYaml . | nindent 4 }}
   {{- end }}
-  revisionHistoryLimit: {{ .Values.revisionHistoryLimit | default 3 }}
+  revisionHistoryLimit: {{ .Values.workload.revisionHistoryLimit | default 3 }}
   selector:
     matchLabels:
       {{- include "chartname.selectorLabels" . | nindent 6 }}
@@ -93,13 +93,49 @@ spec:
           {{- end }}
           image: "{{ .Values.workload.image.repository }}:{{ .Values.workload.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.workload.image.pullPolicy | default "IfNotPresent" }}
+          {{- if .Values.workload.containerPorts }}
+          ports: {{- include "chart.render" (dict "value" .Values.workload.containerPorts "context" $) | nindent 12 }}
+          {{- else if (or .Values.service.enabled .Values.observability.serviceMonitor.enabled) }}
           ports:
-            - name: http
-              containerPort: {{ .Values.networking.service.port }}
-              protocol: TCP
+          {{- if .Values.service.ports }}
+          {{- range $port := .Values.service.ports }}
+          {{ $p := fromYaml (include "chart.render" (dict "value" $port "context" $)) }}
+            - name: {{ $p.name }}
+              containerPort: {{ $p.port }}
+              protocol: {{ $p.protocol | default "TCP" }}
+          {{- end }}
+          {{- else }}
+            - name: {{ .Values.service.name | default "http" }}
+              containerPort: {{ .Values.service.port }}
+              protocol: {{ .Values.service.protocol | default "TCP" }}
+          {{- end }}
+          {{- end }}
           {{- with .Values.workload.env }}
-          env:
-            {{- toYaml . | nindent 12 }}
+          env: {{- include "chart.render" (dict "value" .Values.workload.env "context" $) | nindent 12 }}
+          {{- if .Values.workload.extraRefEnvVars -}}
+          {{- if kindIs "map" .Values.workload.extraRefEnvVars -}}
+            {{- range $key, $value := .Values.workload.extraRefEnvVars }}
+            - name: {{ include "chart.render" (dict "value" $key "context" $) }}
+              valueFrom:
+                fieldRef:
+                  fieldPath: {{ include "chart.render" (dict "value" $value "context" $) }}
+            {{- end }}
+          {{- end }}
+          {{- end }}
+          {{- if .Values.workload.extraEnvVars }}
+          {{- if kindIs "map" .Values.workload.extraEnvVars -}}
+            {{- range $key, $value := .Values.workload.extraEnvVars }}
+            - name: {{ include "chart.render" (dict "value" $key "context" $) }}
+              {{- if kindIs "map" $value -}}
+              {{ include "chart.render" (dict "value" $value "context" $) | nindent 14 }}
+              {{- else }}
+              value: {{ include "chart.render" (dict "value" $value "context" $) | quote}}
+              {{- end }}
+            {{- end }}
+          {{- else }}
+          {{- include "chart.render" (dict "value" .Values.workload.extraEnvVars "context" $) | nindent 12 -}}
+          {{- end }}
+          {{- end }}
           {{- end }}
           {{- if or .Values.config.extraEnvFromConfigMap .Values.config.extraEnvFromSecret .Values.config.sealedSecrets.enabled }}
           envFrom:
@@ -143,15 +179,15 @@ spec:
           resources:
             {{- toYaml .Values.workload.resources | nindent 12 }}
           volumeMounts:
-            {{- if .Values.storage.persistence.enabled }}
-              {{- if .Values.storage.persistence.claims }}
-                {{- range .Values.storage.persistence.claims }}
+            {{- if .Values.persistence.enabled }}
+              {{- if .Values.persistence.claims }}
+                {{- range .Values.persistence.claims }}
             - name: {{ .name }}
               mountPath: {{ .mountPath | default (printf "/data/%s" .name) }}
                 {{- end }}
               {{- else }}
-            - name: {{ .Values.storage.persistence.name | default "storage" }}
-              mountPath: {{ .Values.storage.persistence.mountPath | default "/data" }}
+            - name: {{ .Values.persistence.name | default "storage" }}
+              mountPath: {{ .Values.persistence.mountPath | default "/data" }}
               {{- end }}
             {{- end }}
             {{- range .Values.config.extraConfigMaps }}
@@ -170,8 +206,11 @@ spec:
               {{- end }}
               readOnly: {{ .readOnly | default true }}
             {{- end }}
-            {{- with .Values.storage.volumeMounts }}
+            {{- with .Values.persistence.volumeMounts }}
             {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.persistence.extraVolumeMounts }}
+            {{- include "chart.render" (dict "value" .Values.persistence.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
           {{- with .Values.workload.lifecycle }}
           lifecycle:
@@ -181,17 +220,17 @@ spec:
         {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
       volumes:
-        {{- if .Values.storage.persistence.enabled }}
-          {{- if .Values.storage.persistence.claims }}
-            {{- range .Values.storage.persistence.claims }}
+        {{- if .Values.persistence.enabled }}
+          {{- if .Values.persistence.claims }}
+            {{- range .Values.persistence.claims }}
         - name: {{ .name }}
           persistentVolumeClaim:
             claimName: {{ include "chartname.fullname" $ }}-{{ .name }}
             {{- end }}
           {{- else }}
-        - name: {{ .Values.storage.persistence.name | default "storage" }}
+        - name: {{ .Values.persistence.name | default "storage" }}
           persistentVolumeClaim:
-            claimName: {{ default (include "chartname.fullname" .) .Values.storage.persistence.existingClaim }}
+            claimName: {{ default (include "chartname.fullname" .) .Values.persistence.existingClaim }}
           {{- end }}
         {{- end }}
         {{- range .Values.config.extraConfigMaps }}
@@ -206,8 +245,11 @@ spec:
             secretName: {{ .existingName | default .name }}
             defaultMode: {{ .defaultMode | default 420 }}
         {{- end }}
-        {{- with .Values.storage.volumes }}
+        {{- with .Values.persistence.volumes }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.persistence.extraVolumes }}
+        {{- include "chart.render" (dict "value" .Values.persistence.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
       {{- with .Values.workload.nodeSelector }}
       nodeSelector:
@@ -219,25 +261,25 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-  {{- if and .Values.storage.persistence.enabled (not .Values.volumeClaimTemplates) }}
+  {{- if and .Values.persistence.enabled (not .Values.persistence.volumeClaimTemplates) }}
   volumeClaimTemplates:
     - metadata:
         name: data
       spec:
         accessModes:
-          {{- toYaml (.Values.storage.persistence.accessModes | default (list "ReadWriteOnce")) | nindent 10 }}
+          {{- toYaml (.Values.persistence.accessModes | default (list "ReadWriteOnce")) | nindent 10 }}
         resources:
           requests:
-            storage: {{ .Values.storage.persistence.size | default "10Gi" | quote }}
-        {{- if .Values.storage.persistence.storageClass }}
-        {{- if (eq "-" .Values.storage.persistence.storageClass) }}
+            storage: {{ .Values.persistence.size | default "10Gi" | quote }}
+        {{- if .Values.persistence.storageClass }}
+        {{- if (eq "-" .Values.persistence.storageClass) }}
         storageClassName: ""
         {{- else }}
-        storageClassName: {{ .Values.storage.persistence.storageClass | quote }}
+        storageClassName: {{ .Values.persistence.storageClass | quote }}
         {{- end }}
         {{- end }}
-  {{- else if .Values.storage.volumeClaimTemplates }}
+  {{- else if .Values.persistence.volumeClaimTemplates }}
   volumeClaimTemplates:
-    {{- toYaml .Values.storage.volumeClaimTemplates | nindent 4 }}
+    {{- toYaml .Values.persistence.volumeClaimTemplates | nindent 4 }}
   {{- end }}
 {{- end -}}
