@@ -295,7 +295,7 @@ ingress:
   enabled: false
   ## @param ingress.class [string] Default IngressClassName for the ingress record
   ##
-  className: nginx
+  className: "nginx"
   ## @param ingress.annotations [object] Additional custom annotations for the ingress record
   ## NOTE: If `ingress.certManager=true`, annotation `kubernetes.io/tls-acme: "true"` will automatically be added
   ##
@@ -503,32 +503,22 @@ networkPolicy:
 persistence:
   enabled: false
   storageClass: "oci-bv-retain"
-  accessModes: ["ReadWriteOnce"]
+  accessModes:
+    - ReadWriteOnce
   size: 50Gi
-  claims:
-    - name: data
-      size: 50Gi
-      accessModes: [ReadWriteOnce]
-      storageClass: oci-bv
   ## @param persistence.name [string] The name of the PersistentVolumeClaim to use.
   ## If not set and create is true, a name is generated using the common.names.fullname template
   ##
   name: ""
   ## @param persistence.mountPath [string] The path where the PersistentVolumeClaim is mounted
   ##
-  mountPath: ""
+  mountPath: "/data"
   ## @param persistence.existingClaim [string] The name of the existing PersistentVolumeClaim to use
   ##
   existingClaim: ""
-  # For StatefulSet
-  volumeClaimTemplates:
-    - metadata:
-        name: data
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 50Gi
+  ## @param persistence.annotations [object] Annotations for the PVC
+  ##
+  annotations: {}
   # Extras
   volumes: []
   # - name: foo
@@ -536,12 +526,12 @@ persistence:
   #     secretName: mysecret
   #     optional: false
   volumeMounts: []
-  ## @param extraVolumes Optionally specify extra list of additional volumes for the app pod(s)
-  ##
-  extraVolumes: []
-  ## @param extraVolumeMounts [array] Optionally specify extra list of additional volumeMounts for the app container(s)
-  ##
-  extraVolumeMounts: []
+## @param extraVolumes Optionally specify extra list of additional volumes for the app pod(s)
+##
+extraVolumes: []
+## @param extraVolumeMounts Optionally specify extra list of additional volumeMounts for the app container(s)
+##
+extraVolumeMounts: []
 
 ## @section Configuration parameters
 ##

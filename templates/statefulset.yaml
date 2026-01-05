@@ -22,6 +22,9 @@ spec:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   revisionHistoryLimit: {{ .Values.workload.revisionHistoryLimit | default 3 }}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
   selector:
     matchLabels:
       {{- include "chartname.selectorLabels" . | nindent 6 }}
@@ -180,15 +183,8 @@ spec:
             {{- toYaml .Values.workload.resources | nindent 12 }}
           volumeMounts:
             {{- if .Values.persistence.enabled }}
-              {{- if .Values.persistence.claims }}
-                {{- range .Values.persistence.claims }}
-            - name: {{ .name }}
-              mountPath: {{ .mountPath | default $.Values.persistence.mountPath | default (printf "/data/%s" .name) }}
-                {{- end }}
-              {{- else }}
-            - name: {{ .Values.persistence.name | default "storage" }}
-              mountPath: {{ .Values.persistence.mountPath | default "/data" }}
-              {{- end }}
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
             {{- end }}
             {{- range .Values.config.extraConfigMaps }}
             {{- if .mountPath }}
@@ -219,8 +215,8 @@ spec:
               mountPath: {{ $path }}
               subPath: {{ $filename }}
             {{- end }}
-            {{- if .Values.persistence.extraVolumeMounts }}
-            {{- include "chart.render" (dict "value" .Values.persistence.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- if .Values.extraVolumeMounts }}
+            {{- include "chart.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
           {{- with .Values.workload.lifecycle }}
           lifecycle:
@@ -230,19 +226,6 @@ spec:
         {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
       volumes:
-        {{- if .Values.persistence.enabled }}
-          {{- if .Values.persistence.claims }}
-            {{- range .Values.persistence.claims }}
-        - name: {{ .name }}
-          persistentVolumeClaim:
-            claimName: {{ include "chartname.fullname" $ }}-{{ .name }}
-            {{- end }}
-          {{- else }}
-        - name: {{ .Values.persistence.name | default "storage" }}
-          persistentVolumeClaim:
-            claimName: {{ default (include "chartname.fullname" .) .Values.persistence.existingClaim }}
-          {{- end }}
-        {{- end }}
         {{- if .Values.configuration.enabled }}
         - name: {{ .Values.configuration.mountname }}
             name: {{ .Values.configuration.mountname }}
@@ -265,8 +248,8 @@ spec:
         {{- with .Values.persistence.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if .Values.persistence.extraVolumes }}
-        {{- include "chart.render" (dict "value" .Values.persistence.extraVolumes "context" $) | nindent 8 }}
+        {{- if .Values.extraVolumes }}
+        {{- include "chart.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
       {{- with .Values.workload.nodeSelector }}
       nodeSelector:
@@ -284,16 +267,20 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-  {{- if and .Values.persistence.enabled (not .Values.persistence.volumeClaimTemplates) }}
+  {{- if and .Values.persistence.enabled (not .Values.persistence.existingClaim) }}
   volumeClaimTemplates:
     - metadata:
         name: data
+        {{- with .Values.persistence.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       spec:
         accessModes:
-          {{- toYaml (.Values.persistence.accessModes | default (list "ReadWriteOnce")) | nindent 10 }}
+          {{- toYaml .Values.persistence.accessModes | nindent 10 }}
         resources:
           requests:
-            storage: {{ .Values.persistence.size | default "10Gi" | quote }}
+            storage: {{ .Values.persistence.size | quote }}
         {{- if .Values.persistence.storageClass }}
         {{- if (eq "-" .Values.persistence.storageClass) }}
         storageClassName: ""
@@ -301,8 +288,5 @@ spec:
         storageClassName: {{ .Values.persistence.storageClass | quote }}
         {{- end }}
         {{- end }}
-  {{- else if .Values.persistence.volumeClaimTemplates }}
-  volumeClaimTemplates:
-    {{- toYaml .Values.persistence.volumeClaimTemplates | nindent 4 }}
   {{- end }}
 {{- end -}}

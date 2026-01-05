@@ -179,15 +179,8 @@ spec:
             {{- toYaml .Values.workload.resources | nindent 12 }}
           volumeMounts:
             {{- if .Values.persistence.enabled }}
-              {{- if .Values.persistence.claims }}
-                {{- range .Values.persistence.claims }}
-            - name: {{ .name }}
-              mountPath: {{ .mountPath | default $.Values.persistence.mountPath | default (printf "/data/%s" .name) }}
-                {{- end }}
-              {{- else }}
-            - name: {{ .Values.persistence.name | default "storage" }}
-              mountPath: {{ .Values.persistence.mountPath | default "/data" }}
-              {{- end }}
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
             {{- end }}
             {{- range .Values.config.extraConfigMaps }}
             {{- if .mountPath }}
@@ -218,8 +211,8 @@ spec:
               mountPath: {{ $path }}
               subPath: {{ $filename }}
             {{- end }}
-            {{- if .Values.persistence.extraVolumeMounts }}
-            {{- include "chart.render" (dict "value" .Values.persistence.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- if .Values.extraVolumeMounts }}
+            {{- include "chart.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
           {{- with .Values.workload.lifecycle }}
           lifecycle:
@@ -230,17 +223,9 @@ spec:
         {{- end }}
       volumes:
         {{- if .Values.persistence.enabled }}
-          {{- if .Values.persistence.claims }}
-            {{- range .Values.persistence.claims }}
-        - name: {{ .name }}
+        - name: data
           persistentVolumeClaim:
-            claimName: {{ .name }}
-            {{- end }}
-          {{- else }}
-        - name: {{ .Values.persistence.name | default "storage" }}
-          persistentVolumeClaim:
-            claimName: {{ default (include "chartname.fullname" .) .Values.persistence.existingClaim }}
-          {{- end }}
+            claimName: {{ .Values.persistence.existingClaim | default (include "chartname.fullname" .) }}
         {{- end }}
         {{- if .Values.configuration.enabled }}
         - name: {{ .Values.configuration.mountname }}
@@ -265,8 +250,8 @@ spec:
         {{- with .Values.persistence.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if .Values.persistence.extraVolumes }}
-        {{- include "chart.render" (dict "value" .Values.persistence.extraVolumes "context" $) | nindent 8 }}
+        {{- if .Values.extraVolumes }}
+        {{- include "chart.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
       {{- with .Values.workload.nodeSelector }}
       nodeSelector:
