@@ -11,7 +11,7 @@ kind: Secret
 metadata:
   name: {{ .Values.ingress.tls.secretName | default (printf "%s-tls" (include "chartname.fullname" .)) }}
   annotations:
-    reflector.v1.k8s.emberstack.com/reflects: {{ .Values.ingress.tls.reflectsFrom | quote }}
+    reflector.v1.k8s.emberstack.com/reflects: {{ .Values.ingress.reflectsFrom | quote }}
 type: kubernetes.io/tls
 data:
   # Base64 encoded dummy values to satisfy Secret validation before Reflector syncs
@@ -26,7 +26,7 @@ kind: Secret
 metadata:
   name: {{ .Values.ingressInternal.tls.secretName | default (printf "%s-internal-tls" (include "chartname.fullname" .)) }}
   annotations:
-    reflector.v1.k8s.emberstack.com/reflects: {{ .Values.ingressInternal.tls.reflectsFrom | quote }}
+    reflector.v1.k8s.emberstack.com/reflects: {{ .Values.ingressInternal.reflectsFrom | quote }}
 type: kubernetes.io/tls
 data:
   # Base64 encoded dummy values to satisfy Secret validation before Reflector syncs

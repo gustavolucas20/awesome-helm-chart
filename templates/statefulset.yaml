@@ -137,7 +137,7 @@ spec:
           {{- end }}
           {{- end }}
           {{- end }}
-          {{- if or .Values.config.extraEnvFromConfigMap .Values.config.extraEnvFromSecret .Values.config.sealedSecrets.enabled }}
+          {{- if or .Values.config.extraEnvFromConfigMap .Values.config.extraEnvFromSecret .Values.sealedSecrets.enabled }}
           envFrom:
             {{- range .Values.config.extraEnvFromConfigMap }}
             - configMapRef:
@@ -147,7 +147,7 @@ spec:
             - secretRef:
                 name: {{ tpl . $ }}
             {{- end }}
-            {{- if .Values.config.sealedSecrets.enabled }}
+            {{- if .Values.sealedSecrets.enabled }}
             - secretRef:
                 name: {{ include "chartname.fullname" . }}
             {{- end }}
@@ -183,7 +183,7 @@ spec:
               {{- if .Values.persistence.claims }}
                 {{- range .Values.persistence.claims }}
             - name: {{ .name }}
-              mountPath: {{ .mountPath | default (printf "/data/%s" .name) }}
+              mountPath: {{ .mountPath | default $.Values.persistence.mountPath | default (printf "/data/%s" .name) }}
                 {{- end }}
               {{- else }}
             - name: {{ .Values.persistence.name | default "storage" }}
@@ -191,12 +191,14 @@ spec:
               {{- end }}
             {{- end }}
             {{- range .Values.config.extraConfigMaps }}
+            {{- if .mountPath }}
             - name: {{ .name }}
               mountPath: {{ .mountPath }}
               {{- if .subPath }}
               subPath: {{ .subPath }}
               {{- end }}
               readOnly: {{ .readOnly | default true }}
+            {{- end }}
             {{- end }}
             {{- range .Values.config.extraSecrets }}
             - name: {{ .name }}
@@ -208,6 +210,14 @@ spec:
             {{- end }}
             {{- with .Values.persistence.volumeMounts }}
             {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.configuration.enabled }}
+            {{- $path := required "A valid configuration.path is required!" .Values.configuration.path }}
+            {{- $filename := required "A valid configuration.filename is required!" .Values.configuration.filename }}
+            {{- $mountname := required "A valid configuration.mountname is required!" .Values.configuration.mountname }}
+            - name: {{ $mountname }}
+              mountPath: {{ $path }}
+              subPath: {{ $filename }}
             {{- end }}
             {{- if .Values.persistence.extraVolumeMounts }}
             {{- include "chart.render" (dict "value" .Values.persistence.extraVolumeMounts "context" $) | nindent 12 }}
@@ -233,11 +243,18 @@ spec:
             claimName: {{ default (include "chartname.fullname" .) .Values.persistence.existingClaim }}
           {{- end }}
         {{- end }}
+        {{- if .Values.configuration.enabled }}
+        - name: {{ .Values.configuration.mountname }}
+            name: {{ .Values.configuration.mountname }}
+            defaultMode: {{ .Values.configuration.defaultMode }}
+        {{- end }}
         {{- range .Values.config.extraConfigMaps }}
+        {{- if .mountPath }}
         - name: {{ .name }}
           configMap:
             name: {{ .existingName | default .name }}
             defaultMode: {{ .defaultMode | default 420 }}
+        {{- end }}
         {{- end }}
         {{- range .Values.config.extraSecrets }}
         - name: {{ .name }}
@@ -255,8 +272,14 @@ spec:
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if .Values.workload.affinity }}
+      affinity: {{- include "chart.render" ( dict "value" .Values.workload.affinity "context" $) | nindent 8 }}
+      {{- else }}
       affinity:
-        {{- include "chartname.affinity" . | nindent 8 }} 
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.workload.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.workload.podAntiAffinityPreset "component" .Chart.Name "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.workload.nodeAffinityPreset.type "key" .Values.workload.nodeAffinityPreset.key "values" .Values.workload.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }} 
       {{- with .Values.workload.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}

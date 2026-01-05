@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "chartname.fullname" $ }}-{{ .name }}
+  name: {{ .name }}
   labels:
     {{- include "chartname.labels" $ | nindent 4 }}
   {{- with .annotations }}

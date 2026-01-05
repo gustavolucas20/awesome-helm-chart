@@ -9,6 +9,9 @@ metadata:
     {{- include "chartname.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
+    {{- if and .Values.ingress.tls .Values.ingress.certManager }}
+    kubernetes.io/tls-acme: "true"
+    {{- end }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
@@ -19,7 +22,7 @@ spec:
         {{- range .Values.ingress.hosts }}
         - {{ .host | quote }}
         {{- end }}
-      secretName: {{ default (printf "%s-tls" $fullName) .Values.ingress.tls.secretName }}
+      secretName: {{ default (printf "%s-tls" $fullName) .Values.ingress.secretName }}
     {{- if .Values.ingress.extraTls }}
     {{- include "chart.render" (dict "value" .Values.ingress.extraTls "context" $) | nindent 4 }}
     {{- end }}

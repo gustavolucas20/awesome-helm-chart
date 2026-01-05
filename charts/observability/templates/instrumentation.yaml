@@ -52,25 +52,31 @@ spec:
       {{- with (.Values.openTelemetry.instrumentation.go | default dict).env }}
       {{- toYaml . | nindent 6 }}
       {{- end }}
+  {{- if .Values.openTelemetry.instrumentation.ruby }}
   ruby:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://otel-collector.{{ .Release.Namespace }}.svc.cluster.local:4318
-      {{- with (.Values.openTelemetry.instrumentation.ruby | default dict).env }}
+      {{- with .Values.openTelemetry.instrumentation.ruby.env }}
       {{- toYaml . | nindent 6 }}
       {{- end }}
+  {{- end }}
+  {{- if .Values.openTelemetry.instrumentation.php }}
   php:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://otel-collector.{{ .Release.Namespace }}.svc.cluster.local:4318
-      {{- with (.Values.openTelemetry.instrumentation.php | default dict).env }}
+      {{- with .Values.openTelemetry.instrumentation.php.env }}
       {{- toYaml . | nindent 6 }}
       {{- end }}
+  {{- end }}
+  {{- if .Values.openTelemetry.instrumentation.apacheHttpd }}
   apacheHttpd:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://otel-collector.{{ .Release.Namespace }}.svc.cluster.local:4318
-      {{- with (.Values.openTelemetry.instrumentation.apacheHttpd | default dict).env }}
+      {{- with .Values.openTelemetry.instrumentation.apacheHttpd.env }}
       {{- toYaml . | nindent 6 }}
       {{- end }}
+  {{- end }}
 {{- end }}

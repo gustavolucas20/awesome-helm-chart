@@ -4,7 +4,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "chartname.fullname" $ }}-{{ $job.name }}
+  name: {{ include "chartname.fullname" $ }}
   labels:
     {{- include "chartname.labels" $ | nindent 4 }}
     app.kubernetes.io/component: cronjob
@@ -13,10 +13,10 @@ spec:
   schedule: {{ $job.schedule | quote }}
   concurrencyPolicy: {{ $job.concurrencyPolicy | default "Forbid" }}
   {{- if $job.successfulJobsHistoryLimit }}
-  successfulJobsHistoryLimit: {{ $job.successfulJobsHistoryLimit | int }}
+  successfulJobsHistoryLimit: {{ $job.successfulJobsHistoryLimit | int | default 3 }}
   {{- end }}
   {{- if $job.failedJobsHistoryLimit }}
-  failedJobsHistoryLimit: {{ $job.failedJobsHistoryLimit | int }}
+  failedJobsHistoryLimit: {{ $job.failedJobsHistoryLimit | int | default 1 }}
   {{- end }}
   suspend: {{ $job.suspend | default false }}
   jobTemplate:
@@ -64,10 +64,18 @@ spec:
               {{- end }}
               resources:
                 {{- toYaml ($container.resources | default $.Values.workload.resources) | nindent 16 }}
-              {{- with $container.volumeMounts }}
               volumeMounts:
+                {{- with $container.volumeMounts }}
                 {{- toYaml . | nindent 16 }}
-              {{- end }}
+                {{- end }}
+                {{- if $.Values.configuration.enabled }}
+                {{- $path := required "A valid configuration.path is required!" $.Values.configuration.path }}
+                {{- $filename := required "A valid configuration.filename is required!" $.Values.configuration.filename }}
+                {{- $mountname := required "A valid configuration.mountname is required!" $.Values.configuration.mountname }}
+                - name: {{ $mountname }}
+                  mountPath: {{ $path }}
+                  subPath: {{ $filename }}
+                {{- end }}
               {{- with $container.env }}
               env:
                 {{- toYaml . | nindent 16 }}
@@ -101,17 +109,27 @@ spec:
                 {{- toYaml . | nindent 16 }}
               {{- end }}
           {{- end }}
-          {{- with $job.volumes }}
           volumes:
+            {{- if $.Values.configuration.enabled }}
+            - name: {{ $.Values.configuration.mountname }}
+              configMap:
+                name: {{ $.Values.configuration.mountname }}
+                defaultMode: {{ $.Values.config.configuration.defaultMode }}
+            {{- end }}
+            {{- with $job.volumes }}
             {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- end }}
           {{- with $job.nodeSelector }}
           nodeSelector:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with $job.affinity }}
+          {{- if $job.affinity }}
+          affinity: {{- include "chart.render" (dict "value" $job.affinity "context" $) | nindent 12 }}
+          {{- else }}
           affinity:
-            {{- toYaml . | nindent 12 }}
+            podAffinity: {{- include "common.affinities.pods" (dict "type" $.Values.workload.podAffinityPreset "context" $) | nindent 14 }}
+            podAntiAffinity: {{- include "common.affinities.pods" (dict "type" $.Values.workload.podAntiAffinityPreset "component" "cronjob" "context" $) | nindent 14 }}
+            nodeAffinity: {{- include "common.affinities.nodes" (dict "type" $.Values.workload.nodeAffinityPreset.type "key" $.Values.workload.nodeAffinityPreset.key "values" $.Values.workload.nodeAffinityPreset.values) | nindent 14 }}
           {{- end }}
 {{- end }}
 {{- end }}

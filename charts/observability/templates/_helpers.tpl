@@ -53,5 +53,9 @@ Create the name of the service account to use
 Note: For subchart, we reference the parent chart's service account
 */}}
 {{- define "observability.serviceAccountName" -}}
-{{- printf "%s-%s" .Release.Name "helm-primedb" -}}
+{{- if .Values.serviceAccount.create -}}
+    {{- default (printf "%s-collector" (include "observability.fullname" .)) .Values.serviceAccount.name -}}
+{{- else -}}
+    {{- default "default" .Values.serviceAccount.name -}}
+{{- end -}}
 {{- end -}}

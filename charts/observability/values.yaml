@@ -37,19 +37,21 @@ openTelemetry:
 
   # Collector configuration
   config: |
-    receivers:
-      otlp:
-        protocols:
-          grpc:
-          http:
     exporters:
       otlphttp:
-        endpoint: "http://tempo.svc.cluster.local:4318"
+        endpoint: "http://tempo-distributor.grafana-lgtm.svc.cluster.local:4318"
+      loki:
+        endpoint: "http://loki-gateway.grafana-lgtm.svc.cluster.local/loki/api/v1/push"
     service:
       pipelines:
         traces:
           receivers: [otlp]
+          processors: [memory_limiter, batch]
           exporters: [otlphttp]
+        logs:
+          receivers: [otlp, k8s_events]
+          processors: [memory_limiter, batch]
+          exporters: [loki, logging]
 
   # Auto-instrumentation
   instrumentation:
@@ -58,3 +60,8 @@ openTelemetry:
       type: parentbased_traceidratio
       argument: "1"
     language: java # java, python, dotnet, nodejs, go, ruby, php, apacheHttpd
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""

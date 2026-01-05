@@ -1,49 +1,91 @@
-# =============================================================================
-# GLOBAL SETTINGS
-# =============================================================================
+---
 global:
-  nameOverride: "" # "my-app"
-  fullnameOverride: "" # "my-app-fullname"
-  commonLabels: {}
-  # environment: production
-  # team: backend
-  commonAnnotations: {}
-  # project.io/id: "123"
-  imagePullSecrets: []
-  # - name: regcred
+  env: ""
 
-# =============================================================================
-# MAIN WORKLOAD (App Controller)
-# =============================================================================
+  ## @param nameOverride [string] String to partially override common.names.fullname
+  ##
+  nameOverride: ""
+
+  ## @param fullnameOverride [string] String to fully override common.names.fullname
+  ##
+  fullnameOverride: ""
+
+  ## @param commonLabels [object] Labels to add to all deployed objects
+  ##
+  commonLabels: {}
+
+  ## @param commonAnnotations [object] Annotations to add to all deployed objects
+  ##
+  commonAnnotations: {}
+
+  ## @param imagePullSecrets [list] List of image pull secrets
+  ##
+  imagePullSecrets: []
+
 workload:
-  kind: Deployment # Deployment or StatefulSet
+  ## @param workload.kind [string] `Deployment` or `StatefulSet`
+  ##
+  kind: Deployment
+
+  ## @param workload.replicaCount [integer] Number of replicas to deploy
+  ##
   replicaCount: 1
+
+  ## @param workload.revisionHistoryLimit [integer] Number of old replicas to keep
+  ##
   revisionHistoryLimit: 3
 
+  ## @param workload.image.repository [string] Image repository
+  ## @param image.tag [string] image tag (immutable tags are recommended)
+  ## @param image.pullPolicy [string] image pull policy
+  ##
   image:
-    repository: nginx
+    repository: ""
     pullPolicy: IfNotPresent
-    tag: "" # "1.2.3"
+    tag: latest
 
-  # Environment
+  ## @param workload.updateStrategy [object] Update strategy
+  ##
+  updateStrategy:
+    type: RollingUpdate
+
+  ## @param workload.env [list] Environment variables
+  ##
   env: []
-  # - name: ENV_VAR
-  #   value: "value"
-  extraEnvVars: {}
-  # DB_HOST: "localhost"
-  extraRefEnvVars: {}
-  # DB_PASSWORD:
-  #   secretName: my-secret
-  #   key: password
 
-  # Container Config
-  workingDir: "" # "/app"
-  command: [] # ["/bin/sh"]
-  args: [] # ["-c", "echo hello"]
+  ## @param extraEnvVars [object] with extra environment variables to add
+  ## e.g:
+  ## extraEnvVars:
+  ##   - name: FOO
+  ##     value: "bar"
+  ## e.g: Like this is possible to merge multiple values from different files
+  ## extraEnvVars:
+  ##   FOO: "bar"
+  ##
+  extraEnvVars: {}
+
+  ## @param workload.extraRefEnvVars [object] Extra environment variables from secrets or configmaps
+  ##
+  extraRefEnvVars: {}
+
+  ## @param workload.workingDir [string] Working directory for the container
+  ##
+  workingDir: ""
+
+  ## @param workload.command [list] Command to run in the container
+  ##
+  command: []
+
+  ## @param workload.args [list] Arguments to pass to the command
+  ##
+  args: []
+
+  ## @param lifecycleHooks [object] for the app container(s) to automate configuration before or after startup
+  ##
   lifecycle: {}
-  # preStop:
-  #   exec:
-  #     command: ["/bin/sh", "-c", "sleep 10"]
+
+  ## @param workload.resources [object] Resource limits and requests
+  ##
   resources: {}
   # requests:
   #   cpu: 100m
@@ -52,14 +94,20 @@ workload:
   #   cpu: 200m
   #   memory: 256Mi
 
-  # Security
+  ## Configure Pods Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param podSecurityContext.enabled [bool] Enabled pods' Security Context
+  ## @param podSecurityContext.fsGroup [integer] Set pod's Security Context fsGroup
+  ##
   podSecurityContext: {}
-  # fsGroup: 2000
-  securityContext: {}
-  # runAsUser: 1000
-  # readOnlyRootFilesystem: true
+    # fsGroup: 1001
 
-  # Probes
+  ## @param workload.securityContext [object] Container security context
+  ##
+  securityContext: {}
+
+  ## @param workload.probes [object] Probes
+  ##
   probes:
     startup:
       enabled: false
@@ -88,34 +136,78 @@ workload:
       successThreshold: 1
       failureThreshold: 3
 
-  # Scheduling & Networking
+  ## @param nodeSelector [object] Node labels for pods assignment
+  ## ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ##
   nodeSelector: {}
-  # disktype: ssd
+
+  ## @param tolerations [array] Tolerations for pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  ##
   tolerations: []
-  # - key: "key"
-  #   operator: "Equal"
-  #   value: "value"
-  #   effect: "NoSchedule"
+
+  ## @param affinity [object] Affinity for pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  ## NOTE: `podAffinityPreset`, `podAntiAffinityPreset`, and `nodeAffinityPreset` will be ignored when it's set
+  ##
   affinity: {}
-  # podAntiAffinity:
-  #   preferredDuringSchedulingIgnoredDuringExecution:
-  #   - weight: 100
-  #     podAffinityTerm:
-  #       labelSelector:
-  #         matchExpressions:
-  #         - key: app
-  #           operator: In
-  #           values:
-  #           - my-app
-  #       topologyKey: kubernetes.io/hostname
-  priorityClassName: "" # "high-priority"
-  schedulerName: "" # "my-scheduler"
+
+  ## @param podAffinityPreset [string] Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAffinityPreset: ""
+
+  ## @param podAntiAffinityPreset [string] Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAntiAffinityPreset: soft
+
+  ## Node affinity preset
+  ## ref: c
+  ##
+  nodeAffinityPreset:
+    ## @param nodeAffinityPreset.type [string] Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+    ##
+    type: ""
+    ## @param nodeAffinityPreset.key [string] Node label key to match. Ignored if `affinity` is set
+    ##
+    key: ""
+    ## @param nodeAffinityPreset.values [array] Node label values to match. Ignored if `affinity` is set
+    ## E.g.
+    ## values:
+    ##   - e2e-az1
+    ##   - e2e-az2
+    ##
+    values: []
+
+  ## @param priorityClassName [string] pods' priorityClassName
+  ##
+  priorityClassName: ""
+
+  ## @param workload.schedulerName [string] Scheduler name
+  ##
+  schedulerName: ""
+
+  ## @param workload.hostAliases [list] Host aliases
+  ##
   hostAliases: []
-  # - ip: "127.0.0.1"
-  #   hostnames:
-  #   - "foo.local"
+
+  ## @param workload.dnsPolicy [string] DNS policy
+  ##
   dnsPolicy: ClusterFirst
+
+  ## @param workload.dnsConfig [object] DNS config
+  ##
   dnsConfig: {}
+
+  ## @param workload.terminationGracePeriodSeconds [integer] Termination grace period
+  ##
+  terminationGracePeriodSeconds: 30
+
+  ## @param podAnnotations [object] Annotations for pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  ##
+  podAnnotations: {}
   # nameservers:
   #   - 1.2.3.4
   # searches:
@@ -124,17 +216,36 @@ workload:
   #   - name: ndots
   #     value: "2"
 
-  # Additional Containers
+  ## @param initContainers [array] Add additional init containers to the pod(s)
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+  ## e.g:
+  ## initContainers:
+  ##  - name: your-image-name
+  ##    image: your-image
+  ##    imagePullPolicy: Always
+  ##    command: ['sh', '-c', 'echo "hello world"']
+  ##
   initContainers: []
-  # - name: init-myservice
-  #   image: busybox
-  #   command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+
+  ## @param extraContainers [array] Add additional containers to the pod(s)
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/#pod-template
+  ## e.g:
+  ## extraContainers:
+  ##  - name: your-image-name
+  ##    image: your-image
+  ##    imagePullPolicy: Always
+  ##    command: ['sh', '-c', 'echo "hello world"']
+  ##
   extraContainers: []
-  # - name: sidecar
-  #   image: sidecar:1.0
+
+  ## @param containerPorts [object] Container ports
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service
+  ## e.g:
+  ## containerPorts:
+  ##   http: 8080
+  ##   metrics: 9090
+  ##
   containerPorts: {}
-  # http: 8080
-  # metrics: 9090
 
   # Type Specific Attributes
   deployment:
@@ -143,16 +254,12 @@ workload:
   statefulset:
     annotations: {}
     # meta.helm.sh/release-name: "my-release"
-  updateStrategy:
-    type: RollingUpdate
-  terminationGracePeriodSeconds: 30
-  podAnnotations: {}
 
-# =============================================================================
-# COMPONENTS
-# =============================================================================
-
+## @section Service
+##
 service:
+  ## @param service.enabled [bool] Enable service
+  ##
   enabled: true
   type: ClusterIP
   port: 80
@@ -160,103 +267,230 @@ service:
   protocol: TCP
   name: http
 
-  # Advanced
+  ## @param service.ports [array] List of app service ports
+  ##
   ports: []
   # - name: https
   #   port: 443
   #   targetPort: 8443
   #   protocol: TCP
   annotations: {}
-  # service.beta.kubernetes.io/aws-load-balancer-type: nlb
+  ## @param service.headless [bool] Service headless
+  ##
   headless: false
+  ## @param service.clusterIP [string] Service cluster IP
+  ##
   clusterIP: "" # "None" or specific IP
+  ## @param service.externalTrafficPolicy [string] app service external traffic policy
+  ## ref http://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+  ##
   externalTrafficPolicy: Cluster
 
+## @section Ingress parameters
+## ref: http://kubernetes.io/docs/user-guide/ingress/
+##
 ingress:
+  ## @param ingress.enabled [bool] Enable ingress record generation
+  ##
   enabled: false
+  ## @param ingress.class [string] Default IngressClassName for the ingress record
+  ##
   className: nginx
+  ## @param ingress.annotations [object] Additional custom annotations for the ingress record
+  ## NOTE: If `ingress.certManager=true`, annotation `kubernetes.io/tls-acme: "true"` will automatically be added
+  ##
   annotations: {}
   # kubernetes.io/ingress.class: nginx
   hosts:
+    ## @param ingress.hosts [array] Default host for the ingress record
+    ##
     - host: chart-example.local
       paths:
         - path: /
           pathType: Prefix
+  ## @param ingress.extraHosts [array] Extra hosts to be added to ingress record
+  ##
   extraHosts: []
-  # - host: chart-example.org
-  #   paths:
-  #     - path: /
-  #       pathType: ImplementationSpecific
+  ## @param ingress.extraHosts [array] An array with additional host(s) to be covered with the ingress record
+  ## e.g:
+  ## extraHosts:
+  ## - host: host.local
+  ##   http:
+  ##     paths:
+  ##       - backend:
+  ##           service:
+  ##             name: my-service
+  ##             port:
+  ##               name: http
+  ##         path: /
+  ##         pathType: ImplementationSpecific
+  ##
   extraPaths: []
-  # - path: /admin
-  #   pathType: Prefix
-  #   backend:
-  #     service:
-  #       name: ssl-redirect
-  #       port:
-  #         name: use-annotation
+  ## @param ingress.extraTls [array] TLS configuration for additional hostname(s) to be covered with this ingress record
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/#tls
+  ## e.g:
+  ## extraTls:
+  ## - hosts:
+  ##     - host.local
+  ##   secretName: host.local-tls
+  ##
   extraTls: []
-  # - hosts:
-  #     - chart-example.org
-  #   secretName: chart-example-tls-extra
-  tls:
-    enabled: false
-    secretName: ""
+  ## @param ingress.tls [bool] Enable TLS configuration for the host defined at `ingress.hostname` parameter
+  ## TLS certificates will be retrieved from a TLS secret with name: `{{- printf "%s-tls" .Values.ingress.hostname }}`
+  ## You can:
+  ##   - Use the `ingress.secrets` parameter to create this TLS secret
+  ##   - Relay on cert-manager to create it by setting `ingress.certManager=true`
+  ##   - Relay on Helm to create self-signed certificates by setting `ingress.selfSigned=true`
+  ##
+  tls: false
 
+  certManager: true
+  ## @param ingress.secretName [string] TLS secret name
+  ##
+  secretName: ""
+  ## @param ingress.reflectsFrom [string] Copy the certificate from the specified secret name
+  ##
+  reflectsFrom: ""
+
+## @section Ingress parameters
+## ref: http://kubernetes.io/docs/user-guide/ingress/
+##
 ingressInternal:
+  ## @param ingress.enabled [bool] Enable ingress record generation
+  ##
   enabled: false
-  className: nginx-internal
+  ## @param ingress.annotations [object] Additional custom annotations for the ingress record
+  ## NOTE: If `ingress.certManager=true`, annotation `kubernetes.io/tls-acme: "true"` will automatically be added
+  ##
+  className: "nginx-internal"
   annotations: {}
+  ## @param ingress.hosts [array] Default host for the ingress record
+  ##
   hosts:
     - host: chart-example-internal.local
       paths:
+        ## @param ingress.path [string] Default path for the ingress record
+        ## NOTE: You may need to set this to '/*' in order to use this with ALB ingress controllers
+        ##
         - path: /
+          ## @param ingress.pathType [string] Ingress path type
+          ##
           pathType: Prefix
+  ## @param ingress.extraHosts [array] Extra hosts to be added to ingress record
+  ##
   extraHosts: []
+  ## @param ingress.extraPaths [array] An array with additional host(s) to be covered with the ingress record
+  ## e.g:
+  ## extraHosts:
+  ## - host: host.local
+  ##   http:
+  ##     paths:
+  ##       - backend:
+  ##           service:
+  ##             name: my-service
+  ##             port:
+  ##               name: http
+  ##         path: /
+  ##         pathType: ImplementationSpecific
+  ##
   extraPaths: []
+  ## @param ingress.extraTls [array] TLS configuration for additional hostname(s) to be covered with this ingress record
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/#tls
+  ## e.g:
+  ## extraTls:
+  ## - hosts:
+  ##     - host.local
+  ##   secretName: host.local-tls
+  ##
   extraTls: []
-  tls:
-    enabled: true
-    secretName: ""
+  ## @param ingress.tls [bool] Enable TLS configuration for the host defined at `ingress.hostname` parameter
+  ## TLS certificates will be retrieved from a TLS secret with name: `{{- printf "%s-tls" .Values.ingress.hostname }}`
+  ## You can:
+  ##   - Use the `ingress.secrets` parameter to create this TLS secret
+  ##   - Relay on cert-manager to create it by setting `ingress.certManager=true`
+  ##   - Relay on Helm to create self-signed certificates by setting `ingress.selfSigned=true`
+  ##
+  tls: true
+  ## @param ingress.secretName [string] TLS secret name
+  ##
+  secretName: ""
+  ## @param ingress.reflectsFrom [string] Copy the certificate from the specified secret name
+  ##
+  reflectsFrom: ""
 
+## @section Gateway parameters
 gateway:
+  ## @param gateway.enabled [bool] Enable gateway record generation
+  ##
   enabled: false
   routes:
     web:
+      ## @param gateway.routes.web.enabled [bool] Enable web route
+      ##
       enabled: false
+      ## @param gateway.routes.web.kind [string] Web route kind
+      ##
       kind: HTTPRoute
+      ## @param gateway.routes.web.matches [array] Web route matches
+      ##
       matches:
         - path:
             type: PathPrefix
             value: /
+      ## @param gateway.routes.web.backendPort [int] Web route backend port
+      ##
+      backendPort: 80
     api:
+      ## @param gateway.routes.api.enabled [bool] Enable API route
+      ##
       enabled: false
+      ## @param gateway.routes.api.kind [string] API route kind
+      ##
       kind: GRPCRoute
+      ## @param gateway.routes.api.backendPort [int] API route backend port
+      ##
       backendPort: 50051
 
+## ServiceAccount configuration
+##
 serviceAccount:
+  ## @param serviceAccount.create [bool] Specifies whether a ServiceAccount should be created
+  ##
   create: true
   annotations: {}
-  # eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/my-role
-  name: "" # "my-service-account"
+  ## @param serviceAccount.name [string] The name of the ServiceAccount to use.
+  ## If not set and create is true, a name is generated using the common.names.fullname template
+  ##
+  name: ""
 
 cronjob:
-  enabled: true
+  enabled: false
   jobs: []
   # - name: "hello-world"
   #   schedule: "*/5 * * * *"
-  #   command: ["/bin/sh", "-c", "echo hello"]
+  #   containers:
+  #     - name: "hello"
+  #       image: "busybox"
+  #       command: ["/bin/sh", "-c", "echo hello"]
 
+## @section Autoscaling parameters
+##
 autoscaling:
   enabled: false
   minReplicas: 1
   maxReplicas: 3
   targetCPUUtilizationPercentage: 80
+  #targetMemoryUtilizationPercentage: 80
 
+## @section PodDisruptionBudget parameters
+##
 pdb:
   enabled: false
   minAvailable: 1
+  maxUnavailable: ""
 
+## @section NetworkPolicy parameters
+##
 networkPolicy:
   enabled: false
   podSelector: {}
@@ -264,19 +498,28 @@ networkPolicy:
   ingress: []
   egress: []
 
+## @section Persistence parameters
+##
 persistence:
   enabled: false
   storageClass: "oci-bv-retain"
   accessModes: ["ReadWriteOnce"]
   size: 50Gi
-  claims: []
-  # - name: data
-  #   size: 10Gi
-  #   accessModes: [ReadWriteOnce]
-  #   storageClass: oci-bv
-  name: "" # "my-pvc" if using single claim
-  mountPath: "/data"
-  existingClaim: "" # "my-existing-pvc"
+  claims:
+    - name: data
+      size: 50Gi
+      accessModes: [ReadWriteOnce]
+      storageClass: oci-bv
+  ## @param persistence.name [string] The name of the PersistentVolumeClaim to use.
+  ## If not set and create is true, a name is generated using the common.names.fullname template
+  ##
+  name: ""
+  ## @param persistence.mountPath [string] The path where the PersistentVolumeClaim is mounted
+  ##
+  mountPath: ""
+  ## @param persistence.existingClaim [string] The name of the existing PersistentVolumeClaim to use
+  ##
+  existingClaim: ""
   # For StatefulSet
   volumeClaimTemplates:
     - metadata:
@@ -293,57 +536,87 @@ persistence:
   #     secretName: mysecret
   #     optional: false
   volumeMounts: []
-  # - name: foo
-  #   mountPath: "/etc/foo"
-  #   readOnly: true
+  ## @param extraVolumes Optionally specify extra list of additional volumes for the app pod(s)
+  ##
   extraVolumes: []
+  ## @param extraVolumeMounts [array] Optionally specify extra list of additional volumeMounts for the app container(s)
+  ##
   extraVolumeMounts: []
 
-# =============================================================================
-# CONFIGURATION
-# =============================================================================
+## @section Configuration parameters
+##
 config:
+  ## @param configFilesPath [string] Path where the ConfigMapList get the files to Create the ConfigMaps
+  ##
   configFilesPath: "files"
+  ## @param extraConfigMaps [array] Optionally specify extra list of additional ConfigMaps
+  ##
   extraConfigMaps: []
-  # - name: my-config
-  #   data:
-  #     key: value
+  ## @param extraSecrets [array] Optionally specify extra list of additional Secrets
+  ##
   extraSecrets: []
-  # - name: my-secret
-  #   stringData:
-  #     key: value
+  ## @param extraEnvFromConfigMap [array] Optionally specify extra list of additional ConfigMaps to be used as environment variables
+  ##
   extraEnvFromConfigMap: []
-  # - my-config-map
+  ## @param extraEnvFromSecret [array] Optionally specify extra list of additional Secrets to be used as environment variables
+  ##
   extraEnvFromSecret: []
-  # - my-secret
 
-  sealedSecrets:
-    enabled: false
+## @section Configuration parameters
+##
+configuration:
+  enabled: false
+  ## @param configuration.mountname [string] Name of the mount point
+  ##
+  mountname: ""
+  ## @param configuration.configMapName [string] Name of the ConfigMap
+  ##
+  configMapName: ""
+  ## @param configuration.path [string] Path where the configuration file is mounted
+  ##
+  path: ""
+  ## @param configuration.filename [string] Name of the configuration file
+  ##
+  filename: ""
+  ## @param configuration.defaultMode [int] Default mode for the configuration file
+  ##
+  defaultMode: 0644
 
-  externalSecret:
-    enabled: false
-    secretStoreRef:
-      name: "" # "my-secret-store"
-      kind: SecretStore
-    target:
-      creationPolicy: Owner
-    refreshInterval: "1h"
-    data: []
-    # - secretKey: "key-in-k8s"
-    #   remoteRef:
-    #     key: "key-in-provider"
-    dataFrom: []
-    # - key: "all-keys-in-provider"
+## @section Bitnami parameters
+##
+sealedSecrets:
+  ## @param sealedSecrets.enabled [bool] Enable sealed secrets
+  ## ref: https://github.com/bitnami-labs/sealed-secrets
+  ## e.g:
+  ## sealedSecrets:
+  ##   enabled: true
+  ##     FOO: <encrypted-secret>
+  enabled: false
 
-  secretStore:
-    enabled: false
-    vaultOCID: "ocid1.vault.oc1.ap-singapore-1.gzukg55taadhm.abzwsljrmaynvkdw6342szaoep3hkq6wkbwjg3cdkrflxeusqxgg6fjdbcra"
-    region: "ap-singapore-1"
-    principalType: "UserPrincipal"
-    user: ""
-    tenancy: ""
-    privateKey: ""
-    fingerprint: ""
+eso:
+  enabled: false
+  secretStoreRef:
+    name: "" # "my-secret-store"
+    kind: ClusterSecretStore
+  target:
+    creationPolicy: Owner
+  refreshInterval: "30s"
+  data: []
+  # - secretKey: "key-in-k8s"
+  #   remoteRef:
+  #     key: "key-in-provider"
+  dataFrom: []
+  # - key: "all-keys-in-provider"
+
+secretStore:
+  enabled: false
+  vaultOCID: "ocid1.vault.oc1.ap-singapore-1.gzukg55taadhm.abzwsljrmaynvkdw6342szaoep3hkq6wkbwjg3cdkrflxeusqxgg6fjdbcra"
+  region: "ap-singapore-1"
+  principalType: "UserPrincipal"
+  user: ""
+  tenancy: ""
+  privateKey: ""
+  fingerprint: ""
 
 # =============================================================================
 # OBSERVABILITY (Subchart)
@@ -357,7 +630,6 @@ observability:
     path: /metrics
     port: http
     additionalLabels: {}
-    # release: prometheus
   prometheusRules:
     enabled: false
     additionalLabels: {}
@@ -370,6 +642,8 @@ observability:
     #     for: 5m
   openTelemetry:
     enabled: false
+    keys:
+      host: OTEL_COLLECTOR_HOST
     mode: deployment
     config: |
       receivers:
@@ -379,22 +653,25 @@ observability:
             http:
       exporters:
         otlphttp:
-          endpoint: "http://tempo.grafana-lgtm.cluster.local:4318"
+          endpoint: "http://jaeger.tracing.svc:4317"
+        loki:
+          endpoint: "http://loki-gateway.grafana-lgtm.svc.cluster.local/loki/api/v1/push"
       service:
         pipelines:
           traces:
             receivers: [otlp]
+            processors: [memory_limiter, batch]
             exporters: [otlphttp]
+        logs:
+          receivers: [otlp, k8s_events]
+          processors: [memory_limiter, batch]
+          exporters: [loki, logging]
     instrumentation:
       enabled: false
       sampler:
         type: parentbased_traceidratio
         argument: "1"
       language: java
-
-# =============================================================================
-# EXTRAS
-# =============================================================================
 
 extraObjects: []
 # - apiVersion: v1
